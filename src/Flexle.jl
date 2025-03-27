@@ -1,5 +1,12 @@
 module Flexle
 
-greet() = print("Hello World!")
+using Printf
+using Random
+using BenchmarkTools
 
-end # module Flexle
+include("sampler.jl")
+include("interface.jl")
+
+export FlexleSampler, update!, push!, deleteat!, getindex, setindex!, sample
+
+end
