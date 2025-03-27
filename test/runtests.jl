@@ -1,7 +1,14 @@
-using Flexle
-using Test
+using .Flexle
 
-include("flexletest.jl")
+using BenchmarkTools
+using HypothesisTests
+using Printf
+using ProfileView
+using Test
+using Random
+
+include("test_validity.jl")
+include("test_runtime.jl")
 
 
 function runtests()

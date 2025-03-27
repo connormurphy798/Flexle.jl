@@ -1,6 +1,5 @@
 # User interface containing all exported Flexle functions
 
-using Revise
 using Random
 
 """

@@ -57,4 +57,4 @@ Many thanks for the excellent technique and writeup.
 This package was originally developed as part of [jOpqua](https://github.com/pablocarderam/jOpqua), an
 epidemiological modeling project led by [Pablo Cárdenas R.](https://github.com/pablocarderam) at the Ragon
 Institute in Cambridge, MA. Thanks to Pablo for both (1) the motivation for this project, namely the need to
-sample and update quickly and (2) his unending feedback and support thoughout its development.
+sample and update quickly, and (2) his unending feedback and support thoughout its development.
