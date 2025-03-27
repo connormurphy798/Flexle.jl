@@ -10,20 +10,20 @@ Flexle (<ins>flex</ins>ible, binary-<ins>le</ins>vel rejection sampling) is a te
 
 Other strategies for fast sampling from weighted distributions (such as the
 [alias method](https://en.wikipedia.org/wiki/Alias_method)) require precomputing a data structure from which
-one can sample quickly but which cannot be "updated"; a change to any of the weights (or the addition/removal
-of a weight) requires recomputing the entire data structure. Flexle is designed to be dynamic in that, in
-addition to enabling fast sampling, it supports fast updating, addition, and removal of weights.
+one can sample quickly but which cannot be "updated"; a change to any of the weights requires recomputing the
+entire data structure. Flexle is designed to be dynamic in that, in addition to enabling fast sampling, it
+supports fast updating, addition, and removal of weights.
 
 The fundamental sampler data structure and corresponding sampling algorithm are described
 [here](https://www.aarondefazio.com/tangentially/?p=58) by Aaron Defazio. Briefly, the strategy involves
 grouping weights into "levels" of similar value and tracking the total weight of each level. Sampling is
-performed by first using the cumulative distribution function of the levels themselves to select a level,
-then using rejection sampling to select an element from the chosen level.
+performed by first using the cumulative distribution function of the levels to select a level, then using
+rejection sampling to select an element from the chosen level.
 
 The primary conceptual change to Defazio's method is in allowing **unlimited dynamic range of weights**.
-As its weights are updated, a `FlexleSampler` adaptively adds and removes levels to accommodate its current
-state. This means that Flexle can in principle be used to model any discrete distribution, including one
-where a subset of events happen with probability 0.
+As its weights are updated, a `FlexleSampler` adaptively adds and removes levels to accommodate. This means
+that Flexle can in principle be used to model any discrete distribution, including one where a subset of
+events happen with probability 0.
 
 
 ## API
@@ -33,7 +33,7 @@ is used to store, modify, and sample from a discrete distribution. The `FlexleSa
 collection of `weights` (where `weights[i]` is the weight associated with element `i`) and interacted with using
 the following:
 
-| Function/Operation | Description |
+| Function | Description |
 |---|---|
 | `FlexleSampler(weights)` | Create a `FlexleSampler` object from an `AbstractVector` of `weights`. | 
 | `getindex(sampler, i)`[^1] | Get the weight of element `i` in `sampler`. |
