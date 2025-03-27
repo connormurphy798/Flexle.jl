@@ -10,12 +10,12 @@ Create a `FlexleSampler` from a `Vector` of `weights`.
 """
 function FlexleSampler(weights::AbstractVector{Float64})
     w_vector = Vector(weights)
+    w_sum = 0.0
 
     if length(w_vector) == 0
-        throw("Cannot create FlexleSampler from AbstractVector of length 0.")
+        return FlexleSampler(Vector{FlexLevel}(), w_vector, w_sum, Vector{Int64}(), nothing)
     end
 
-    w_sum = 0.0
     weights_nonzero = filter(x -> !iszero(x), weights)
     if isempty(weights_nonzero)
         return FlexleSampler(Vector{FlexLevel}(), w_vector, w_sum, zeros(Int64, length(w_vector)), nothing)
@@ -131,6 +131,8 @@ function Base.push!(sampler::FlexleSampler, w::Float64)
         end
         to = getLevel(bounds, sampler)
         addToFlexLevel!(length(sampler.weights), to, sampler)
+    else
+        push!(sampler.index_positions, 0)
     end
     return length(sampler.weights)
 end

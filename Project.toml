@@ -9,6 +9,7 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 ProfileView = "c46f51b8-102a-5cf2-8d2c-8597cb0e0da7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 BenchmarkTools = "1.6.0"
@@ -16,3 +17,4 @@ Printf = "1.11.0"
 ProfileView = "1.10.1"
 Random = "1.11.0"
 Revise = "3.7.3"
+Test = "1.11.0"
