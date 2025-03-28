@@ -3,6 +3,6 @@ module Flexle
 include("sampler.jl")
 include("interface.jl")
 
-export FlexleSampler, update!, push!, deleteat!, getindex, setindex!, sample
+export FlexleSampler, getindex, setindex!, getweights, numweights, push!, deleteat!, sample
 
 end

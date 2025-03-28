@@ -38,6 +38,8 @@ the following:
 | `FlexleSampler(weights)` | Create a `FlexleSampler` object from an `AbstractVector` of `weights`. | 
 | `getindex(sampler, i)`[^1] | Get the weight of element `i` in `sampler`. |
 | `setindex!(sampler, w, i)`[^2] | Update the weight of element  `i` in `sampler` to be equal to `w`, returning the difference between the new and old weights of element `i`. |
+| `getweights(sampler)` | Get a `Vector` of all the weights in `sampler`. |
+| `numweights(sampler)` | Get the number of weights in `sampler`. |
 | `push!(sampler, w)` | Add a new element of weight `w` to `sampler`, placing it at the end of `sampler.weights`. |
 | `deleteat!(sampler, i)` | Remove element `i` from `sampler`, shifting the index of every subsequent element over to fill the gap. |
 | `sample(sampler)` | Take a single random sample from `sampler`, returning the index of the element sampled. |

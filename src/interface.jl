@@ -115,6 +115,24 @@ function Base.setindex!(sampler::FlexleSampler, w::Float64, i::Int64)
 end
 
 """
+    getweights(sampler)
+
+Get the `Vector` of all the weights in `sampler`.
+"""
+function getweights(sampler::FlexleSampler)
+    return sampler.weights
+end
+
+"""
+    numweights(sampler)
+
+Get the number of weights in `sampler`.
+"""
+function numweights(sampler::FlexleSampler)
+    return length(sampler.weights)
+end
+
+"""
     push!(sampler, w)
 
 Add a new element with weight `w` to `sampler`, updating all fields accordingly.

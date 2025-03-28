@@ -10,7 +10,7 @@ include("test_correctness.jl")
 include("test_runtime.jl")
 
 
-@testset verbose=true "FlexleSampler user functions—creation/maintenance" begin
+@testset verbose=true "FlexleSampler initialization/maintenance" begin
     @testset "FlexleSampler (initialize sampler from weights)" begin
         s = FlexleSampler(rand(100))
         @test verify(s, verbose=false) == 0
@@ -122,6 +122,24 @@ include("test_runtime.jl")
         deleteat!(s, 1)     # 1.1, empty sampler
         @test (verify(s, verbose=false) == 0) && (length(s.weights) == 0)
     end
+end
+
+@testset "Flexle stats" begin
+    s = FlexleSampler([2.0*i for i in 1:5])
+
+    @test s[2] == 4.0
+    @test s[5] == 10.0
+    @test_throws BoundsError s[6]
+
+    @test getweights(s) == [2.0, 4.0, 6.0, 8.0, 10.0]
+    @test numweights(s) == 5
+
+    push!(s, 11.0)
+    push!(s, 12.0)
+    deleteat!(s, 1)
+    @test getweights(s) == [4.0, 6.0, 8.0, 10.0, 11.0, 12.0]
+    @test numweights(s) == 6
+    @test_throws BoundsError s[0]
 end
 
 @testset "Flexle sampling distribution" begin
