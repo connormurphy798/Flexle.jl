@@ -360,15 +360,14 @@ function testFlexleSampling(sampler::FlexleSampler, n::Int64)
 end
 
 """
-    flexleChiSquared(sampler, n=1000000)
+    flexleChiSquared(sampler, n=10000)
 
 Take `n` samples from `sampler` and perform a chi-squared test on the resulting empirical distribution.
 
 """
 function flexleChiSquared(sampler::FlexleSampler; n::Int64=10000)
     actual = testFlexleSampling(sampler, n)
-    expected = flexleSamplingExpectedValue(sampler, n=n)
-    norm = sum([v for (k, v) in expected])
+    expected = flexleSamplingExpectedValue(sampler)
 
     counts = Vector{Int64}()
     probs = Vector{Float64}()
@@ -377,10 +376,10 @@ function flexleChiSquared(sampler::FlexleSampler; n::Int64=10000)
     for (i, _) in actual
         e_i, a_i = expected[i], actual[i]
         if iszero(e_i) ⊻ iszero(a_i)
-            throw("index $i: expected $e_i, got $a_i)")
+            throw("index $i: expected $(e_i*n), got $a_i)")
         end
         push!(counts, a_i)
-        push!(probs, e_i/norm)
+        push!(probs, e_i)
     end
     nonzero = v -> !iszero(v)
     filter!(nonzero, counts)
