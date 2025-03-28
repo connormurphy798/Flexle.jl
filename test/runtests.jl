@@ -124,8 +124,12 @@ include("test_runtime.jl")
     end
 end
 
-@testset begin
-    alpha = 0.05
+@testset "Flexle sampling distribution" begin
+    alpha = 0.01
+
+    # test for empirical distribution _not_ significantly different from expected given weights.
+    # each p-value tests will fail ~alpha% of the time by chance.
+    # correspondingly, the chance of _no_ tests failing is (1-alpha)^num_tests (~96% for 4 @ alpha=0.01)
 
     s = FlexleSampler([rand() for _ in 1:20])
     @test pvalue(flexleChiSquared(s)) > alpha
@@ -133,8 +137,17 @@ end
     s = FlexleSampler([20.0-i for i in 1:20])
     @test pvalue(flexleChiSquared(s)) > alpha
 
+    push!(s, 6.7)
+    push!(s, 0.0)
+    deleteat!(s, 2)
+    s[3] = 10.1
+    @test pvalue(flexleChiSquared(s)) > alpha
+
+    s = FlexleSampler(vcat(zeros(10), [1.0], zeros(5), [2.0]))
+    @test pvalue(flexleChiSquared(s)) > alpha
+
     s = FlexleSampler(zeros(1000))
-    @test_throws DomainError flexleChiSquared(s)
+    @test_throws DomainError flexleChiSquared(s)    # can't sample from all-0 distribution
 
 
 end
