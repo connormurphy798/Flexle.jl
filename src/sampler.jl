@@ -228,7 +228,9 @@ end
 """
     printFlexleSampler(sampler, name="")
 
-Print `sampler` with optional label `name`.
+Verbosely print `sampler` with optional label `name`.
+
+Only used in testing; for end user printing, see [`Base.show`](@ref).
 """
 function printFlexleSampler(sampler::FlexleSampler; name::String="")
     @printf "\nFlexleSampler %s\n" name
@@ -244,6 +246,21 @@ function printFlexleSampler(sampler::FlexleSampler; name::String="")
             @printf "max=%f\n" l.max
             println(l.indices)
         end
+    end
+end
+
+function Base.show(io::IO, sampler::FlexleSampler)
+    l = length(sampler.weights)
+    print(io, "FlexleSampler ($l weights)")
+end
+
+
+function Base.show(io::IO, ::MIME"text/plain", sampler::FlexleSampler)
+    l = length(sampler.weights)
+    print(io, "FlexleSampler ($l weights):\n")
+    for i in eachindex(sampler.weights)
+        cap = i==l ? "" : "\n"
+        print(io, "    $i: $(sampler.weights[i])$cap")
     end
 end
 
