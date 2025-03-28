@@ -360,6 +360,36 @@ function testFlexleSampling(sampler::FlexleSampler, n::Int64)
 end
 
 """
+    flexleChiSquared(sampler, n=1000000)
+
+Take `n` samples from `sampler` and perform a chi-squared test on the resulting empirical distribution.
+
+"""
+function flexleChiSquared(sampler::FlexleSampler; n::Int64=10000)
+    actual = testFlexleSampling(sampler, n)
+    expected = flexleSamplingExpectedValue(sampler, n=n)
+    norm = sum([v for (k, v) in expected])
+
+    counts = Vector{Int64}()
+    probs = Vector{Float64}()
+
+    # filter zeros - chi squared test will break with them included
+    for (i, _) in actual
+        e_i, a_i = expected[i], actual[i]
+        if iszero(e_i) ⊻ iszero(a_i)
+            throw("index $i: expected $e_i, got $a_i)")
+        end
+        push!(counts, a_i)
+        push!(probs, e_i/norm)
+    end
+    nonzero = v -> !iszero(v)
+    filter!(nonzero, counts)
+    filter!(nonzero, probs)
+
+    return ChisqTest(counts, probs)
+end
+
+"""
     testUserFunctions()
 
 Test the internal maintenance of the `FlexleSampler` struct in response to user commands.
@@ -413,7 +443,6 @@ function testUserFunctions()
     deleteat!(s2, 1)       # first element
     verify(s2)
 end
-
 
 
 """

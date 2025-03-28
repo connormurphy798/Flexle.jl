@@ -392,6 +392,9 @@ Also returns a "free" random number in [0, 1) for use in subsequent rejection sa
 (see [`rejectionSample`](@ref)).
 """
 @inline function cdfSample(sampler::FlexleSampler)
+    if isempty(sampler.levels)
+        throw(DomainError("attempted to sample from sampler with no positive weights"))
+    end
     local chosen_level::FlexLevel
     norm_rand_n = rand() * sampler.sum
     cum_sum = 0.0
