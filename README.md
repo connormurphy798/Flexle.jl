@@ -4,7 +4,7 @@ Fast, dynamically weighted random sampling.
 
 ## Overview
 
-Flexle (<ins>flex</ins>ible, binary-<ins>le</ins>vel rejection sampling) is a technique for
+`Flexle.jl` (<ins>flex</ins>ible, binary-<ins>le</ins>vel rejection sampling) is a package for
 **high performance sampling from discrete distributions** under the constraint of being able to
 **quickly modify said distributions**.
 
@@ -21,9 +21,9 @@ performed by first using the cumulative distribution function of the levels to s
 rejection sampling to select an element from the chosen level.
 
 The primary conceptual change to Defazio's method is in allowing **unlimited dynamic range of weights**.
-As its weights are updated, a `FlexleSampler` adaptively adds and removes levels to accommodate. This means
-that Flexle can in principle be used to model any discrete distribution, including one where a subset of
-events happen with probability 0.
+As its weights are updated, a `FlexleSampler` adaptively adds and removes levels to accommodate. Along with
+storing weights separately from the levels themselves, this means that Flexle can in principle be used to model
+any discrete distribution, including one where a subset of events happen with probability 0.
 
 
 ## API
@@ -35,7 +35,7 @@ the following:
 
 | Function | Description |
 |---|---|
-| `FlexleSampler(weights)` | Create a `FlexleSampler` object from an `AbstractVector` of `weights`. | 
+| `FlexleSampler(weights)` | Create a `FlexleSampler` instance from an `AbstractVector` of `weights`. | 
 | `getindex(sampler, i)`[^1] | Get the weight of element `i` in `sampler`. |
 | `setindex!(sampler, w, i)`[^2] | Update the weight of element  `i` in `sampler` to be equal to `w`, returning the difference between the new and old weights of element `i`. |
 | `getweights(sampler)` | Get a `Vector` of all the weights in `sampler`. |
