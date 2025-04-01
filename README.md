@@ -4,7 +4,7 @@ Fast, dynamically weighted random sampling.
 
 ## Overview
 
-`Flexle.jl` (<ins>flex</ins>ible, binary-<ins>le</ins>vel rejection sampling) is a package for
+Flexle (<ins>flex</ins>ible, binary-<ins>le</ins>vel rejection sampling) is a package for
 **high performance sampling from discrete distributions** under the constraint of being able to
 **quickly modify said distributions**.
 
@@ -28,7 +28,7 @@ any discrete distribution, including one where a subset of events happen with pr
 
 ## API
 
-Users interface with `Flexle.jl` exclusively through instances of the `FlexleSampler` struct. A `FlexleSampler`
+Users interface with Flexle exclusively through instances of the `FlexleSampler` struct. A `FlexleSampler`
 is used to store, modify, and sample from a discrete distribution. The `FlexleSampler` is generated from a
 collection of `weights` (where `weights[i]` is the weight associated with element `i`) and interacted with using
 the following:

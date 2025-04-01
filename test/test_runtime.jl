@@ -207,7 +207,7 @@ Benchmark tests for README.md.
 """
 
 function compare_sampling()
-    sizes = [10, 100, 1000, 10000, 100000]
+    sizes = [5, 50, 500, 5000, 50000, 500000]
     weight_vectors = [rand(n) for n in sizes]
 
     weights  = [Weights(w) for w in weight_vectors]
@@ -219,16 +219,57 @@ function compare_sampling()
     return sizes, weights_results, flexle_results
 end
 
-function plot_compare_sampling()
+function plot_compare_sampling(path="docs/assets/", extension=".png")
     sizes, weights_results, flexle_results = compare_sampling()
     num_groups = length(sizes)
     num_categories = 2
 
-    ctg = repeat(["`StatsBase.Weights`", "`Flexle.FlexleSampler`"], inner = num_groups)
+    ctg = repeat(["StatsBase default sample", "Flexle sample"], inner = num_groups)
     nam = repeat([string(s) for s in sizes], outer = num_categories)
 
     
-    groupedbar(nam, hcat(weights_results, flexle_results), group = ctg, xlabel = "#weights", ylabel = "Time (ns)",
+    p = groupedbar(nam, hcat(weights_results, flexle_results), group = ctg, xlabel = "#weights", ylabel = "Mean sample time (ns)",
         # title = "Scores by group and category", bar_width = 0.67,
-        lw = 0, yaxis=:log, framestyle = :box)
+        lw = 0, yaxis=:log, ylims=(1e0, 1e+6), framestyle = :box, legend=:topleft)
+
+    savefig(p, path * "01_compare_sampling" * extension)
+end
+
+function alias_runtime_test(weights, n_samples)
+    indices = eachindex(weights)
+    result = Vector{Int64}(undef, n_samples)
+    StatsBase.alias_sample!(indices, Weights(weights), result)
+    return result
+end
+
+function flexle_runtime_test(weights, n_samples)
+    sampler = FlexleSampler(weights)
+    result = [Flexle.sample(sampler) for _ in 1:n_samples]
+    return result
+end
+
+function compare_sampling_alias(n_samples::Int64)
+    sizes = [5, 50, 500, 5000, 50000, 500000]
+    weight_vectors = [rand(n) for n in sizes]
+
+    weights_results::Vector{Float64} = [mean(@benchmark(alias_runtime_test($w, $n_samples))).time for w in weight_vectors]
+    flexle_results::Vector{Float64} = [mean(@benchmark(flexle_runtime_test($w, $n_samples))).time for w in weight_vectors]
+
+    return sizes, weights_results, flexle_results
+end
+
+function plot_compare_sampling_alias(n_samples::Int64, path="docs/assets/", extension=".png")
+    sizes, weights_results, flexle_results = compare_sampling_alias(n_samples)
+    num_groups = length(sizes)
+    num_categories = 2
+
+    ctg = repeat(["StatsBase alias sample", "Flexle sample"], inner = num_groups)
+    nam = repeat([string(s) for s in sizes], outer = num_categories)
+
+    ylabel = "Mean time (ns), " * string(n_samples) * " samples"
+    p = groupedbar(nam, hcat(weights_results, flexle_results), group = ctg, xlabel = "#weights", ylabel = ylabel,
+        # title = "Scores by group and category", bar_width = 0.67,
+        lw = 0, yaxis=:log, ylims=(1e0, 1e+8), framestyle = :box, legend=:topleft)
+
+    savefig(p, path * "02_compare_sampling_alias_" * string(n_samples) * extension)
 end
