@@ -199,3 +199,36 @@ function testRemoveWeight(; h::Int64=10000, n::Int64=1000, seed=0)
     println("Flexle remove weight:")
     @time testFlexleRemoveWeight!(s, indices)
 end
+
+
+
+"""
+Benchmark tests for README.md.
+"""
+
+function compare_sampling()
+    sizes = [10, 100, 1000, 10000, 100000]
+    weight_vectors = [rand(n) for n in sizes]
+
+    weights  = [Weights(w) for w in weight_vectors]
+    samplers = [FlexleSampler(w) for w in weight_vectors]
+    
+    weights_results::Vector{Float64} = [mean(@benchmark(StatsBase.sample($w))).time for w in weights]
+    flexle_results::Vector{Float64} = [mean(@benchmark(Flexle.sample($s))).time for s in samplers]
+
+    return sizes, weights_results, flexle_results
+end
+
+function plot_compare_sampling()
+    sizes, weights_results, flexle_results = compare_sampling()
+    num_groups = length(sizes)
+    num_categories = 2
+
+    ctg = repeat(["`StatsBase.Weights`", "`Flexle.FlexleSampler`"], inner = num_groups)
+    nam = repeat([string(s) for s in sizes], outer = num_categories)
+
+    
+    groupedbar(nam, hcat(weights_results, flexle_results), group = ctg, xlabel = "#weights", ylabel = "Time (ns)",
+        # title = "Scores by group and category", bar_width = 0.67,
+        lw = 0, yaxis=:log, framestyle = :box)
+end
