@@ -5,21 +5,21 @@ for Flexle performance.
 
 ## Benchmarking
 
-Flexle.j is a performance-focused package. Below are several benchmarks comparing the runtime of various
+Flexle.jl is a performance-focused package. Below are several benchmarks comparing the runtime of various
 Flexle operations to their StatsBase.jl equivalents.[^3]
 
 [^3]: See `test/test_runtime.jl` for code used to generate these graphs.
 
 ### Sampling
 
-To assess raw sampling performance, we measured time to sample from a random weights vector (elements drawn
-from $U[0,1)$) of size $5*10^k$ for $k \in [0 .. 5]$. Graphs show mean time in nanoseconds to perform a single
+To assess raw sampling performance, we measured time to sample from a random weights vector (weights drawn
+from a uniform distribution between 0 and 1) of size $10^k$ for $k \in [1 .. 6]$. Graphs show mean time in nanoseconds to perform a single
 sample from a `Weights` vector in the case of StatsBase or a `FlexleSampler` in that of Flexle. These numbers
 include only sampling time, excluding time to compute the relevant data structure.
 
 | ![Figure 1](docs/assets/01_compare_sampling.png) |
 |:--:|
-|*Figure 1: Comparison of raw sample runtime for* `Flexle.sample` *versus* `StatsBase.sample`. |
+|*Figure 1: Comparison of raw sample runtime for `Flexle.sample` versus `StatsBase.sample`.* |
 
 For larger weights vectors (i.e. those $\geq 50$ in size), Flexle far outperforms StatsBase in sampling time.
 For smaller weights vectors, there is no substantial difference in runtime. Solely in terms of sampling,
@@ -34,12 +34,12 @@ structure (the alias table or flexle sampler, respectively) and to take the spec
 
 | ![Figure 2a](docs/assets/02_compare_sampling_alias_100.png) ![Figure 2b](docs/assets/02_compare_sampling_alias_1000.png) ![Figure 2c](docs/assets/02_compare_sampling_alias_10000.png) ![Figure 2d](docs/assets/02_compare_sampling_alias_100000.png) |
 |:--:|
-|*Figure 2: Comparison of runtime for `Flexle.sample` *versus* `StatsBase.alias_sample!`*, including both sampling and data structure initialization.* |
+|*Figure 2: Comparison of runtime for `Flexle.sample` versus `StatsBase.alias_sample!`, including both sampling and data structure initialization.* |
 
 In this case, the alias method performs better for smaller weights vectors, while Flexle performs better for
 larger ones. The dividing line of identical performance depends on the number of samples. As a rough guideline,
 when taking $n$ samples from a vector of $m$ weights, one can expect runtime to be best using the alias method
-if $n > 2m$ and Flexle if $n < 2m$.
+if $n > m$ and Flexle if $n < m$.
 
 ### Updating weights
 
@@ -48,9 +48,9 @@ existing alias table without simply regenerating it from scratch, a process whic
 of weights.
 
 By contrast, an existing `FlexleSampler` can be adjusted incrementally. Specially, a weight can be:
-- updated—$O(1)$ time
-- added—$O(1)$ time (amortized)
-- removed—$O(m)$ time
+- updated: $O(1)$ time
+- added: $O(1)$ time (amortized)
+- removed: $O(m)$ time
 
 To demonstrate this, consider the following sequence of operations that can be implemented using either Flexle
 or StatsBase. The sequence is intended to replicate the behavior of performing weighted random samples in practice,
@@ -60,19 +60,24 @@ with other computations; the operations themselves are arbitrary other than to d
 Given a number of iterations $r$ and either a vector of weights or a `FlexleSampler` corresponding to those weights
 (either one denoted by $w$):
 ```
-v = w[sample(w)]                 # pick a random element from w and read its weight, v
-f = first_decimal_place(v)       # call a function that gets the first number following the decimal point in v
+v = w[sample(w)]                  # pick a random element from w and read its weight, v
+f = first_decimal_place(v)        # call a function that gets the first number following the decimal point in v
 
-if f==0, delete v from w         # 1/10th of the time, delete an existing element
-if f==5, add 7v to the end of w  # 1/10th of the time, add a new element
-else, let v be 2v                # the remaining 8/10ths of the time, update an existing element
+if f==0, delete v from w          # 1/10th of the time, delete an existing element
+if f==5, add v/7 to the end of w  # 1/10th of the time, add a new element
+else, let v be 2v                 # the remaining 8/10ths of the time, update an existing element
 
 repeat r times
 ```
 
 The following shows the runtime of (1) initializing a vector of weights and all appropriate data structures, plus
-(2) running the above algorithm for random weights vectors as above[^4] for $10^3$, $10^6$, or $10^9$ iterations.
+(2) running the above algorithm for random weights vectors as above[^4] for $10^j$ iterations with $j \in [2 .. 5]$.
+
+| ![Figure 3a](docs/assets/03_compare_ops_1000.png) ![Figure 3b](docs/assets/03_compare_ops_10000.png) ![Figure 3c](docs/assets/03_compare_ops_100000.png) ![Figure 3d](docs/assets/03_compare_ops_1000000.png) |
+|:--:|
+|*Figure 3: Comparison of runtime for Flexle versus StatsBase (default sampling algorithm) to perform the aforementioned arbitrary sequence of operations.* |
+
+For all numbers of iterations and sizes of weights vectors assessed, Flexle outperforms StatsBase by around 0.5 to
+2 orders of magnitude, even including the extra time necessary to initialize the `FlexleSampler`.
 
 [^4]: excluding that of size $5$, as too many removals can easily result in an empty weights vector
-
-

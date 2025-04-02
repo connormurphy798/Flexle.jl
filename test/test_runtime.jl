@@ -211,7 +211,7 @@ const PURPLE::Int64 = 4
 
 
 function compare_sampling()
-    sizes = [5, 50, 500, 5000, 50000, 500000]
+    sizes = [10, 100, 1000, 10000, 100000, 1000000]
     weight_vectors = [rand(n) for n in sizes]
 
     weights  = [Weights(w) for w in weight_vectors]
@@ -257,7 +257,7 @@ function flexle_runtime_test(weights, n_samples)
 end
 
 function compare_sampling_alias(n_samples::Int64)
-    sizes = [5, 50, 500, 5000, 50000, 500000]
+    sizes = [10, 100, 1000, 10000, 100000, 1000000]
     weight_vectors = [rand(n) for n in sizes]
 
     weights_results::Vector{Float64} = [mean(@benchmark(alias_runtime_test($w, $n_samples))).time for w in weight_vectors]
@@ -294,16 +294,65 @@ end
 function do_ops_statsbase(weights::Vector{Float64}, r::Int64)
     w = Weights(weights)
     for _ in 1:r
-        i = sample(w)
+        i = StatsBase.sample(w)
         v = w[i]
         f = first_decimal_place(v)
 
         if f == 0
             w = Weights(deleteat!(w.values, i))
         elseif f == 5
-            w = Weights(push!(w.values, 7.0*v))
+            w = Weights(push!(w.values, v/7.0))
         else
             w[i] = 2.0*v
         end
     end
+    return w
+end
+
+function do_ops_flexle(weights::Vector{Float64}, r::Int64)
+    sampler = FlexleSampler(weights)
+    for _ in 1:r
+        i = Flexle.sample(sampler)
+        v = sampler[i]
+        f = first_decimal_place(v)
+
+        if f == 0
+            deleteat!(sampler, i)
+        elseif f == 5
+            push!(sampler, v/7.0)
+        else
+            sampler[i] = 2.0*v
+        end
+    end
+    return sampler
+end
+
+function compare_ops(n_iterations::Int64)
+    sizes = [10, 100, 1000, 10000, 100000, 1000000]
+    weight_vectors = [rand(n) for n in sizes]
+
+    weights_results::Vector{Float64} = [mean(@benchmark(do_ops_statsbase($w, $n_iterations))).time for w in weight_vectors]
+    flexle_results::Vector{Float64} = [mean(@benchmark(do_ops_flexle($w, $n_iterations))).time for w in weight_vectors]
+
+    return sizes, weights_results, flexle_results
+end
+
+function plot_compare_ops(n_iterations::Int64; path="docs/assets/", extension=".png", write=true)
+    sizes, weights_results, flexle_results = compare_ops(n_iterations)
+    num_groups = length(sizes)
+    num_categories = 2
+
+    ctg = repeat(["StatsBase (default sample)", "Flexle"], inner = num_groups)
+    nam = repeat([string(s) for s in sizes], outer = num_categories)
+
+    ylabel = "Mean time (ns), " * string(n_iterations) * " iterations"
+    p = groupedbar(nam, hcat(weights_results, flexle_results), group = ctg, xlabel = "#weights", ylabel = ylabel,
+        # title = "Scores by group and category", bar_width = 0.67,
+        lw = 0, yaxis=:log, ylims=(1e0, 1e+12), framestyle = :box, legend=:topleft, color=repeat([BLUE, GREEN], inner=num_groups))
+
+    if write
+        savefig(p, path * "03_compare_ops_" * string(n_iterations) * extension)
+    end
+
+    display(p)
 end

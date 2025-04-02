@@ -21,8 +21,8 @@ performed by first using the cumulative distribution function of the levels to s
 rejection sampling to select an element from the chosen level.
 
 The primary conceptual change to Defazio's method is in allowing **unlimited dynamic range of weights**.
-As its weights are updated, a `FlexleSampler` adaptively adds and removes levels to accommodate. Along with
-storing weights separately from the levels themselves, this means that Flexle can in principle be used to model
+As its weights are updated, a `FlexleSampler` adaptively adds and removes levels to accommodate. This along
+with storing weights separately from the levels themselves means that Flexle can in principle be used to model
 any discrete distribution, including one where a subset of events happen with probability 0.
 
 
