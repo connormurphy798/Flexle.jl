@@ -205,6 +205,10 @@ end
 """
 Benchmark tests for README.md.
 """
+const BLUE::Int64 = 1
+const GREEN::Int64 = 3
+const PURPLE::Int64 = 4
+
 
 function compare_sampling()
     sizes = [5, 50, 500, 5000, 50000, 500000]
@@ -219,7 +223,7 @@ function compare_sampling()
     return sizes, weights_results, flexle_results
 end
 
-function plot_compare_sampling(path="docs/assets/", extension=".png")
+function plot_compare_sampling(; path="docs/assets/", extension=".png", write=true)
     sizes, weights_results, flexle_results = compare_sampling()
     num_groups = length(sizes)
     num_categories = 2
@@ -230,9 +234,13 @@ function plot_compare_sampling(path="docs/assets/", extension=".png")
     
     p = groupedbar(nam, hcat(weights_results, flexle_results), group = ctg, xlabel = "#weights", ylabel = "Mean sample time (ns)",
         # title = "Scores by group and category", bar_width = 0.67,
-        lw = 0, yaxis=:log, ylims=(1e0, 1e+6), framestyle = :box, legend=:topleft)
+        lw = 0, yaxis=:log, ylims=(1e0, 1e+6), framestyle = :box, legend=:topleft, color=repeat([BLUE, GREEN], inner=num_groups))
 
-    savefig(p, path * "01_compare_sampling" * extension)
+    if write
+        savefig(p, path * "01_compare_sampling" * extension)
+    end
+
+    display(p)
 end
 
 function alias_runtime_test(weights, n_samples)
@@ -258,7 +266,7 @@ function compare_sampling_alias(n_samples::Int64)
     return sizes, weights_results, flexle_results
 end
 
-function plot_compare_sampling_alias(n_samples::Int64, path="docs/assets/", extension=".png")
+function plot_compare_sampling_alias(n_samples::Int64; path="docs/assets/", extension=".png", write=true)
     sizes, weights_results, flexle_results = compare_sampling_alias(n_samples)
     num_groups = length(sizes)
     num_categories = 2
@@ -269,7 +277,33 @@ function plot_compare_sampling_alias(n_samples::Int64, path="docs/assets/", exte
     ylabel = "Mean time (ns), " * string(n_samples) * " samples"
     p = groupedbar(nam, hcat(weights_results, flexle_results), group = ctg, xlabel = "#weights", ylabel = ylabel,
         # title = "Scores by group and category", bar_width = 0.67,
-        lw = 0, yaxis=:log, ylims=(1e0, 1e+8), framestyle = :box, legend=:topleft)
+        lw = 0, yaxis=:log, ylims=(1e0, 1e+8), framestyle = :box, legend=:topleft, color=repeat([PURPLE, GREEN], inner=num_groups))
 
-    savefig(p, path * "02_compare_sampling_alias_" * string(n_samples) * extension)
+    if write
+        savefig(p, path * "02_compare_sampling_alias_" * string(n_samples) * extension)
+    end
+
+    display(p)
+end
+
+function first_decimal_place(n::Float64)
+    return Int64(round(10.0 * (trunc(n, digits=1) - floor(n))))
+end
+
+
+function do_ops_statsbase(weights::Vector{Float64}, r::Int64)
+    w = Weights(weights)
+    for _ in 1:r
+        i = sample(w)
+        v = w[i]
+        f = first_decimal_place(v)
+
+        if f == 0
+            w = Weights(deleteat!(w.values, i))
+        elseif f == 5
+            w = Weights(push!(w.values, 7.0*v))
+        else
+            w[i] = 2.0*v
+        end
+    end
 end

@@ -30,7 +30,7 @@ In use cases where the weights vector does not change or when it does so infrequ
 involve precomputing a data structure are feasible. The alias method is one such strategy, and it is supported
 by StatsBase. To compare performance to the alias method, we measured time to take $10^l$ samples (for
 $l \in [2 .. 5]$) from the weights vectors above. These tests include both time to initialize the sampling data
-structure and to take the specified number of samples.
+structure (the alias table or flexle sampler, respectively) and to take the specified number of samples.
 
 | ![Figure 2a](docs/assets/02_compare_sampling_alias_100.png) ![Figure 2b](docs/assets/02_compare_sampling_alias_1000.png) ![Figure 2c](docs/assets/02_compare_sampling_alias_10000.png) ![Figure 2d](docs/assets/02_compare_sampling_alias_100000.png) |
 |:--:|
@@ -40,3 +40,39 @@ In this case, the alias method performs better for smaller weights vectors, whil
 larger ones. The dividing line of identical performance depends on the number of samples. As a rough guideline,
 when taking $n$ samples from a vector of $m$ weights, one can expect runtime to be best using the alias method
 if $n > 2m$ and Flexle if $n < 2m$.
+
+### Updating weights
+
+The alias method is not feasible when the weights themselves are frequently changed; there is no way to adjust an
+existing alias table without simply regenerating it from scratch, a process which takes $O(m)$ time in the number
+of weights.
+
+By contrast, an existing `FlexleSampler` can be adjusted incrementally. Specially, a weight can be:
+- updated—$O(1)$ time
+- added—$O(1)$ time (amortized)
+- removed—$O(m)$ time
+
+To demonstrate this, consider the following sequence of operations that can be implemented using either Flexle
+or StatsBase. The sequence is intended to replicate the behavior of performing weighted random samples in practice,
+where sampling, updating, addition, and removal of weights all occur in some relative proportion and are interspersed
+with other computations; the operations themselves are arbitrary other than to demonstrate runtime performance.
+
+Given a number of iterations $r$ and either a vector of weights or a `FlexleSampler` corresponding to those weights
+(either one denoted by $w$):
+```
+v = w[sample(w)]                 # pick a random element from w and read its weight, v
+f = first_decimal_place(v)       # call a function that gets the first number following the decimal point in v
+
+if f==0, delete v from w         # 1/10th of the time, delete an existing element
+if f==5, add 7v to the end of w  # 1/10th of the time, add a new element
+else, let v be 2v                # the remaining 8/10ths of the time, update an existing element
+
+repeat r times
+```
+
+The following shows the runtime of (1) initializing a vector of weights and all appropriate data structures, plus
+(2) running the above algorithm for random weights vectors as above[^4] for $10^3$, $10^6$, or $10^9$ iterations.
+
+[^4]: excluding that of size $5$, as too many removals can easily result in an empty weights vector
+
+
