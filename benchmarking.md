@@ -71,13 +71,15 @@ repeat r times
 ```
 
 The following shows the runtime of (1) initializing a vector of weights and all appropriate data structures, plus
-(2) running the above algorithm for random weights vectors as above[^4] for $10^j$ iterations with $j \in [2 .. 5]$.
+(2) running the above algorithm for random weights vectors as above[^4] for $10^j$ iterations with $j \in [1 .. 4]$.
 
-| ![Figure 3a](docs/assets/03_compare_ops_1000.png) ![Figure 3b](docs/assets/03_compare_ops_10000.png) ![Figure 3c](docs/assets/03_compare_ops_100000.png) ![Figure 3d](docs/assets/03_compare_ops_1000000.png) |
+| ![Figure 3a](docs/assets/03_compare_ops_10.png) ![Figure 3b](docs/assets/03_compare_ops_100.png) ![Figure 3c](docs/assets/03_compare_ops_1000.png) ![Figure 3d](docs/assets/03_compare_ops_10000.png) |
 |:--:|
 |*Figure 3: Comparison of runtime for Flexle versus StatsBase (default sampling algorithm) to perform the aforementioned arbitrary sequence of operations.* |
 
-For all numbers of iterations and sizes of weights vectors assessed, Flexle outperforms StatsBase by around 0.5 to
-2 orders of magnitude, even including the extra time necessary to initialize the `FlexleSampler`.
+Flexle's performance benefits are best realized when two conditions are met:
+1. The number of operations to be performed (especially sampling, updating, and addition) is large, so the $O(m)$ cost of producing the sampler is successfully amortized.
+2. The number of weights is large, so Flexle's sampling is substantially faster than that of alternatives (see [Figure 1](#sampling)).
+
 
 [^4]: excluding that of size $5$, as too many removals can easily result in an empty weights vector
