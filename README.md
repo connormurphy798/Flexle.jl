@@ -56,10 +56,10 @@ other sampling techniques from StatsBase.jl, see `benchmarking.md`.
 
 TL;DR—In general, Flexle is best suited to use cases where users will _repeatedly_ sample from and modify a
 collection of weights, as the linear-time construction of a `FlexleSampler` from such a collection is amortized
-by constant-time sampling, updating, addition of weights. Additionally, Flexle works best when sampling from
-large collections of weights, as its sampling is (asymptotically speaking) much faster than that of standard
-linear-time algorithms; for smaller collections, the modest improvement in sampling speed may not be enough to
-offset the comparatively expensive sampler initialization.
+by constant-time updating/addition of weights and near constant-time sampling. Flexle's sampling being asymptotically
+faster than that of standard linear-time algorithms also means that Flexle works best when working with large collections
+of weights, where there is a genuine performance improvement to be realized; for smaller collections, the modest
+improvement in sampling speed may not be enough to offset the comparatively expensive sampler initialization.
 
 ## Acknowledgements
 
