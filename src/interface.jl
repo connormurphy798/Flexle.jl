@@ -19,20 +19,20 @@ function FlexleSampler(weights::AbstractVector{Float64})
     if isempty(weights_nonzero)
         return FlexleSampler(Vector{FlexLevel}(), w_vector, w_sum, zeros(Int64, length(w_vector)), nothing)
     end
-    
+
     w_min, w_max = Inf, 0.0
     for w in weights_nonzero
         (w < w_min) && (w_min = w)
         (w > w_max) && (w_max = w)
     end
-    
-    uppermost_log_bound = let 
+
+    uppermost_log_bound = let
         logmax = log2(w_max)
         ceil_logmax = ceil(logmax)
         (logmax == ceil_logmax) ? Int64(logmax) + 1 : Int64(ceil_logmax) # if w_max is a power of 2, can't take its ceiling to get its upper bound - need to add 1 instead
     end
     num_levels = uppermost_log_bound - floorLog2(w_min)     # e.g. -2,5 ==> 7 levels [4,3,2,1,0,-1,-2]
-    
+
     levels = Vector{FlexLevel}(undef, num_levels)   # add check for unreasonable number of levels before allocating space?
     index_positions = zeros(Int64, length(w_vector))
 
@@ -58,6 +58,33 @@ function FlexleSampler(weights::AbstractVector{Float64})
 end
 
 """
+    FlexleSampler()
+
+Create an empty `FlexleSampler`.
+"""
+function FlexleSampler()
+    return FlexleSampler(Vector{Float64}())
+end
+
+"""
+    FlexleSamplers(weights, number)
+
+Create a vector with separate `FlexleSampler` built from a `Vector` of `weights`.
+"""
+function flexlesamplers(weights::AbstractVector{Float64}, number::Int64)
+    return [FlexleSampler(weights) for _ in 1:number]
+end
+
+"""
+    FlexleSamplers(number)
+
+Create a vector with separate, empty `FlexleSampler`.
+"""
+function flexlesamplers(number::Int64)
+    return [FlexleSampler() for _ in 1:number]
+end
+
+"""
     getindex(sampler, i)
 
 Get the weight of element `i` in `sampler`.
@@ -72,8 +99,8 @@ end
 Set the weight of element `i` in `sampler` equal to `w`, returning the difference between the new and old values of `i`.
 """
 function Base.setindex!(sampler::FlexleSampler, w::Float64, i::Int64)
-    from::Union{Nothing, FlexLevel} = nothing
-    to::Union{Nothing, FlexLevel} = nothing
+    from::Union{Nothing,FlexLevel} = nothing
+    to::Union{Nothing,FlexLevel} = nothing
     levels = sampler.levels
     w_old::Float64 = sampler.weights[i]
     delta::Float64 = w - w_old
@@ -198,4 +225,3 @@ sampling (see `rejectionSample`(@ref)) an index from said `FlexLevel`.
     level, rand_n = cdfSample(sampler)
     return rejectionSample(rand_n, level, sampler.weights)
 end
-
