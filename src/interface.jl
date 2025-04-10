@@ -39,7 +39,7 @@ function FlexleSampler(weights::AbstractVector{Float64})
     lower_bound = lowerPowerOf2Bound(w_min)
     for i in num_levels:-1:1
         upper_bound = lower_bound * 2.0
-        levels[i] = FlexLevel((lower_bound, upper_bound), 0.0, 0.0, Vector{Int64}())
+        levels[i] = FlexLevel((lower_bound, upper_bound), 0.0, 0.0, 0, Vector{Int64}())
         lower_bound = upper_bound
     end
 
@@ -48,7 +48,12 @@ function FlexleSampler(weights::AbstractVector{Float64})
         iszero(w) && continue
         l = levels[levelIndex(w, uppermost_log_bound)]
         push!(l.indices, i)
-        (w > l.max) && (l.max = w)
+        if w == l.max
+            l.num_max += 1
+        elseif w > l.max
+            l.max = w
+            l.num_max = 1
+        end
         l.sum += w
         index_positions[i] = length(l.indices)
         w_sum += w

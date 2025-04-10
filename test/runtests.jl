@@ -121,6 +121,19 @@ include("test_runtime.jl")
 
         deleteat!(s, 1)     # 1.1, empty sampler
         @test (verify(s, verbose=false) == 0) && (length(s.weights) == 0)
+
+        s = FlexleSampler([0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0])
+        deleteat!(s, 3)
+        @test (verify(s, verbose=false) == 0)
+
+        deleteat!(s, 3)
+        @test (verify(s, verbose=false) == 0)
+
+        deleteat!(s, 1)
+        @test (verify(s, verbose=false) == 0)
+
+        deleteat!(s, 1)
+        @test (verify(s, verbose=false) == 0)
     end
 end
 

@@ -1,7 +1,7 @@
 name = "Flexle"
 uuid = "dc22aa90-55d8-496a-ae41-a34b09be019a"
 authors = ["Connor Murphy <connor.murphy798@gmail.com>"]
-version = "1.0.0"
+version = "1.0.1"
 
 [deps]
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"

@@ -15,6 +15,7 @@ mutable struct FlexLevel
     bounds::Tuple{Float64,Float64}  # lower, upper
     sum::Float64
     max::Float64
+    num_max::Int64
     indices::Vector{Int64}
 end
 
@@ -29,7 +30,7 @@ end
 # Initialization
 
 function FlexLevel(i::Int64, w::Float64)
-    return FlexLevel(logBounds(w), w, w, [i])
+    return FlexLevel(logBounds(w), w, w, 1, [i])
 end
 
 # Utility methods
@@ -214,15 +215,22 @@ end
 """
     maxLevelWeight(level, sampler)
 
-Get the largest weight in `sampler` of any element in `level`.
+Get the largest weight in `sampler` of any element in `level` and the number of times it occurs.
 """
 function maxLevelWeight(level::FlexLevel, sampler::FlexleSampler)
     m::Float64 = 0.0
+    weights::Vector{Float64} = sampler.weights
+    n::Int64 = 0
     for i in level.indices
-        w = sampler.weights[i]
-        (w > m) && (m = w)
+        w = weights[i]
+        if w == m
+            n += 1
+        elseif w > m
+            m = w
+            n = 1
+        end
     end
-    return m
+    return m, n
 end
 
 """
@@ -294,6 +302,9 @@ function addToFlexLevel!(i::Int64, level::FlexLevel, sampler::FlexleSampler; upd
     (update_sampler_sum) && (sampler.sum += w)
     if w > level.max
         level.max = w
+        level.num_max = 1
+    elseif w == level.max
+        level.num_max += 1
     end
     if i <= length(sampler.index_positions)
         sampler.index_positions[i] = length(level.indices)
@@ -336,8 +347,12 @@ function removeFromFlexLevel!(i::Int64, level::FlexLevel, sampler::FlexleSampler
     (update_sampler_sum) && (sampler.sum -= w)
     if !levelIsPopulated(level)
         level.max = 0.0
+        level.num_max = 0
     elseif w == level.max
-        level.max = maxLevelWeight(level, sampler)
+        level.num_max -= 1
+        if level.num_max == 0
+            level.max, level.num_max = maxLevelWeight(level, sampler)
+        end
     end
 end
 
@@ -361,7 +376,7 @@ function extendLevels!(bounds::Tuple{Float64,Float64}, sampler::FlexleSampler)
         pre = Vector{FlexLevel}(undef, num_new_levels)
         for i in 1:num_new_levels
             u_bound = l_bound * 2.0
-            pre[i] = FlexLevel((l_bound, u_bound), 0.0, 0.0, Vector{Int64}())
+            pre[i] = FlexLevel((l_bound, u_bound), 0.0, 0.0, 0, Vector{Int64}())
             l_bound /= 2.0
         end
         prepend!(sampler.levels, pre)
@@ -370,7 +385,7 @@ function extendLevels!(bounds::Tuple{Float64,Float64}, sampler::FlexleSampler)
         post = Vector{FlexLevel}(undef, num_new_levels)
         for i in num_new_levels:-1:1
             u_bound = l_bound * 2.0
-            post[i] = FlexLevel((l_bound, u_bound), 0.0, 0.0, Vector{Int64}())
+            post[i] = FlexLevel((l_bound, u_bound), 0.0, 0.0, 0, Vector{Int64}())
             l_bound = u_bound
         end
         append!(sampler.levels, post)

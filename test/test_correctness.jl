@@ -83,6 +83,12 @@ function verify(sampler::FlexleSampler; verbose::Bool=true, name::String="")
             errors += 1
             verbose && @printf "Error %i: level (%f, %f) max incorrect (expected %f, got %f)\n" errors level.bounds[1] level.bounds[2] expected_max level.max
         end
+
+        expected_num_max = count(x -> sampler.weights[x]==level.max, level.indices)
+        if expected_num_max != level.num_max
+            errors += 1
+            verbose && @printf "Error %i: level (%f, %f) num_max incorrect (expected %f, got %f)\n" errors level.bounds[1] level.bounds[2] expected_num_max level.num_max
+        end
     end
     if !Flexle.approxeq(overall_sum, sampler.sum)     # correct for probable floating point error
         errors += 1
