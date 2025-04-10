@@ -67,24 +67,6 @@ function FlexleSampler()
 end
 
 """
-    FlexleSamplers(weights, number)
-
-Create a vector with separate `FlexleSampler` built from a `Vector` of `weights`.
-"""
-function flexlesamplers(weights::AbstractVector{Float64}, number::Int64)
-    return [FlexleSampler(weights) for _ in 1:number]
-end
-
-"""
-    FlexleSamplers(number)
-
-Create a vector with separate, empty `FlexleSampler`.
-"""
-function flexlesamplers(number::Int64)
-    return [FlexleSampler() for _ in 1:number]
-end
-
-"""
     getindex(sampler, i)
 
 Get the weight of element `i` in `sampler`.
