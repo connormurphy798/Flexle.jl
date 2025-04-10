@@ -199,7 +199,7 @@ end
 Return a `Bool` indicating whether a `FlexLevel` with bounds `bounds` is present in `sampler`.
 """
 function inSampler(bounds::Tuple{Float64,Float64}, sampler::FlexleSampler)
-    return (sampler.levels[begin].bounds[1] >= bounds[1]) && (bounds[1] >= sampler.levels[end].bounds[1])     # bounds between largest and smallest levels' bounds (inclusive)
+    return (length(sampler.levels) > 0 && sampler.levels[begin].bounds[1] >= bounds[1]) && (bounds[1] >= sampler.levels[end].bounds[1]) # bounds between largest and smallest levels' bounds (inclusive)
 end
 
 """
@@ -354,28 +354,37 @@ function extendLevels!(bounds::Tuple{Float64,Float64}, sampler::FlexleSampler)
     end
 
     l_bound = bounds[1]
-    extend_up = l_bound > sampler.levels[begin].bounds[1]
-    extend_down = l_bound < sampler.levels[end].bounds[1]
-    if extend_up
-        num_new_levels = logDist(sampler.levels[begin].bounds[1], l_bound)
-        pre = Vector{FlexLevel}(undef, num_new_levels)
-        for i in 1:num_new_levels
-            u_bound = l_bound * 2.0
-            pre[i] = FlexLevel((l_bound, u_bound), 0.0, 0.0, Vector{Int64}())
-            l_bound /= 2.0
-        end
-        prepend!(sampler.levels, pre)
-    elseif extend_down
-        num_new_levels = logDist(l_bound, sampler.levels[end].bounds[1])
+    if length(sampler.levels) == 0
+        num_new_levels = 1
         post = Vector{FlexLevel}(undef, num_new_levels)
-        for i in num_new_levels:-1:1
-            u_bound = l_bound * 2.0
-            post[i] = FlexLevel((l_bound, u_bound), 0.0, 0.0, Vector{Int64}())
-            l_bound = u_bound
-        end
+        u_bound = l_bound * 2.0
+        post[1] = FlexLevel((l_bound, u_bound), 0.0, 0.0, Vector{Int64}())
+        l_bound = u_bound
         append!(sampler.levels, post)
     else
-        throw("sampler already contains FlexLevel of specified bounds")
+        extend_up = l_bound > sampler.levels[begin].bounds[1]
+        extend_down = l_bound < sampler.levels[end].bounds[1]
+        if extend_up
+            num_new_levels = logDist(sampler.levels[begin].bounds[1], l_bound)
+            pre = Vector{FlexLevel}(undef, num_new_levels)
+            for i in 1:num_new_levels
+                u_bound = l_bound * 2.0
+                pre[i] = FlexLevel((l_bound, u_bound), 0.0, 0.0, Vector{Int64}())
+                l_bound /= 2.0
+            end
+            prepend!(sampler.levels, pre)
+        elseif extend_down
+            num_new_levels = logDist(l_bound, sampler.levels[end].bounds[1])
+            post = Vector{FlexLevel}(undef, num_new_levels)
+            for i in num_new_levels:-1:1
+                u_bound = l_bound * 2.0
+                post[i] = FlexLevel((l_bound, u_bound), 0.0, 0.0, Vector{Int64}())
+                l_bound = u_bound
+            end
+            append!(sampler.levels, post)
+        else
+            throw("sampler already contains FlexLevel of specified bounds")
+        end
     end
     sampler.max_log2_upper_bound = floorLog2(sampler.levels[1].bounds[2])
 end

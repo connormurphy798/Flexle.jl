@@ -58,6 +58,15 @@ function FlexleSampler(weights::AbstractVector{Float64})
 end
 
 """
+    FlexleSampler()
+
+Create an empty `FlexleSampler`.
+"""
+function FlexleSampler()
+    return FlexleSampler(Vector{Float64}())
+end
+
+"""
     getindex(sampler, i)
 
 Get the weight of element `i` in `sampler`.
