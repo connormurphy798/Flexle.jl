@@ -358,7 +358,7 @@ function testFlexleSampling(sampler::FlexleSampler, n::Int64)
     end
 
     for _ in 1:n
-        i = sample(sampler)
+        i = Flexle.sample(sampler)
         d[i] += 1
     end
 
@@ -381,15 +381,14 @@ function flexleChiSquared(sampler::FlexleSampler; n::Int64=10000)
     # filter zeros - chi squared test will break with them included
     for (i, _) in actual
         e_i, a_i = expected[i], actual[i]
-        if iszero(e_i) ⊻ iszero(a_i)
+        if iszero(e_i) && !iszero(a_i)
             throw("index $i: expected $(e_i*n), got $a_i)")
         end
-        push!(counts, a_i)
-        push!(probs, e_i)
-    end
-    nonzero = v -> !iszero(v)
-    filter!(nonzero, counts)
-    filter!(nonzero, probs)
+        if !iszero(e_i)
+            push!(counts, a_i)
+            push!(probs, e_i)
+        end
+    end    
 
     return ChisqTest(counts, probs)
 end
