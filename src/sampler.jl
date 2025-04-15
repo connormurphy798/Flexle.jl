@@ -262,13 +262,29 @@ function Base.show(io::IO, sampler::FlexleSampler)
     print(io, "FlexleSampler ($l weights)")
 end
 
+function printWeight(io::IO, sampler::FlexleSampler, i::Int64, l::Int64, pad::Int64)
+    cap = i==l ? "" : "\n"
+    print(io, lpad("$i", pad, " ") * ": $(sampler.weights[i])$cap")
+end
 
 function Base.show(io::IO, ::MIME"text/plain", sampler::FlexleSampler)
     l = length(sampler.weights)
-    print(io, "FlexleSampler ($l weights):\n")
-    for i in eachindex(sampler.weights)
-        cap = i==l ? "" : "\n"
-        print(io, "    $i: $(sampler.weights[i])$cap")
+    pad = 4 + ndigits(l)
+    colon = iszero(l) ? "" : ":"
+    print(io, "FlexleSampler ($l weights)$colon\n")
+    n = numweights(sampler)
+    if n > 20
+        for i in 1:10
+            printWeight(io, sampler, i, l, pad)
+        end
+        print(io, "    ⋮\n")
+        for i in (n-8):n
+            printWeight(io, sampler, i, l, pad)
+        end
+    else
+        for i in eachindex(sampler.weights)
+            printWeight(io, sampler, i, l, pad)
+        end
     end
 end
 
@@ -434,7 +450,7 @@ Also returns a "free" random number in [0, 1) for use in subsequent rejection sa
 """
 @inline function cdfSample(sampler::FlexleSampler)
     if isempty(sampler.levels)
-        throw(DomainError("attempted to sample from sampler with no positive weights"))
+        throw(DomainError("no positive weights in FlexleSampler"))
     end
     local chosen_level::FlexLevel
     norm_rand_n = rand() * sampler.sum
