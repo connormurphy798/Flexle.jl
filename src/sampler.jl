@@ -305,7 +305,7 @@ Keyword argument `update_sampler_sum` should only be `false` when `add_to_FlexLe
 following call pattern: 
 ```
 remove_from_FlexLevel!(i, old_level, sampler, update_sampler_sum=false)
-addToLevelFlexLevel(i, new_level, sampler, update_sampler_sum=false)
+add_to_FlexLevel!(i, new_level, sampler, update_sampler_sum=false)
 sampler.sum += new_i_weight - old_i_weight
 ``` 
 This option is provided for performance purposes, as reading and writing to `sampler.sum` can be expensive. The caller MUST update
@@ -343,7 +343,7 @@ Keyword argument `update_sampler_sum` should only be `false` when `remove_from_F
 [`add_to_FlexLevel!`](@ref) to update the weight of an existing element `i` in `sampler`, as in the following call pattern: 
 ```
 remove_from_FlexLevel!(i, old_level, sampler, update_sampler_sum=false)
-addToLevelFlexLevel(i, new_level, sampler, update_sampler_sum=false)
+add_to_FlexLevel!(i, new_level, sampler, update_sampler_sum=false)
 sampler.sum += new_i_weight - old_i_weight
 ``` 
 This option is provided for performance purposes, as reading and writing to `sampler.sum` can be expensive. The caller MUST update

@@ -18,11 +18,12 @@ For larger weights vectors (i.e. those $\geq 100$ in size), Flexle far outperfor
 For smaller weights vectors, there is no substantial difference in runtime. Considering just sampling,
 the performance benefits of using `Flexle.sample` versus `StatsBase.sample` are approximately linear in the number
 of weights. (More precisely, for a collection of weights $W$\, `Flexle.sample` will run in
-$O(\lceil \log(\frac{\max(W^+)}{\min(W^+)}) \rceil)$ time, where $W^+$ is all of the positive (i.e. nonzero)
+$O(\log(\frac{\max(W^+)}{\min(W^+)}))$ time, where $W^+$ is all of the positive (i.e. nonzero)
 weights in $W$\. In other words, the runtime of `Flexle.sample` is dependent not on the number of weights, but
-on the $\log$ of the ratio between the largest and smallest nonzero weights. For most common distributions,
-this number will be far smaller than the size of the collection of weights, meaning the difference in sampling
-time between this and other (linear time) techniques is effectively linear in the number of weights.)
+on the $\log$ of the ratio between the largest and smallest nonzero weights. For common distributions that are
+sufficiently large, this number will be far smaller than the size of the collection of weights, meaning the
+difference in sampling time between this and other (linear time) techniques is effectively linear in the number of
+weights.)
 
 In use cases where the weights vector does not change or in which it does so infrequently, other strategies that
 involve precomputing a data structure are feasible. The alias method is one such strategy, and it is supported
