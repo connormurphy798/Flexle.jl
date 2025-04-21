@@ -3,13 +3,15 @@
 To enable fast random sampling from a modifiable collection of weights, Flexle implements
 the data structure and sampling algorithm described by Aaron Defazio in his 2016 blog post,
 ["Weighted random sampling with replacement with dynamic weights"](https://www.aarondefazio.com/tangentially/?p=58).[^terminology]
-What follows is a discussion of how Flexle works and the runtime of its methods.
+What follows is a discussion of how Flexle works and an analysis of the runtime of its methods.
 
 Given a collection of weights $W$ where $W_i$ corresponds to the weight associated with element
-i, Flexle creates a `FlexleSampler` object that organizes said weights into "levels" according
-to magnitude. Sampling is performed by first selecting a level according to the cumulative
-distribution function of the levels (CDF sampling), then selecting an element from within the
-chosen level using rejection sampling.
+$i$, Flexle creates a `FlexleSampler` object that organizes said weights into "levels" according
+to magnitude. From here, we use two different sampling algorithms to achieve fast sampling.
+First, we select a level according to the cumulative distribution function of the levels (CDF
+sampling); this algorithm is linear in the number of levels, which is generally small by construction.
+We then select an element from within the chosen level using rejection sampling, which is expected
+to run in few iterations when the weights are similar (as they are within a level).
 
 ## Sampling data structure
 
@@ -17,16 +19,16 @@ A `FlexleSampler` is made up of levels, each of which is contains all elements i
 sampler with weights between two adjacent powers of 2, e.g. in $[8, 16)$. This choice of
 bounds has two benefits: [^fastlog2]
 
-1. The maximum weight in a level is strictly less than twice the minimum weight, which makes
-rejection sampling fast.
-2. Levels being logarithmic in scale allows for efficient representation of wide dynamic ranges
-of weights.
+1. Levels being logarithmic in scale allows for representation of wide dynamic ranges of weights
+using few levels, which makes CDF sampling across them fast.
+2. The maximum weight in a level is strictly less than twice the minimum weight, which makes
+rejection sampling within them fast.
 
 The number and range of levels is dynamically chosen and adjusted based on the minimum and maximum
 nonzero weights in a `FlexleSampler`. (Specifically, a sampler made from a vector of weights $W$
 will have $\lceil \log_2(\frac{\max(W^+)}{\min(W^+)}) \rceil + 1$ levels, where $W^+$ is the set
 of nonzero weights in $W$.) For example, `s = FlexleSampler([2.0, 1.5, 2.5, 0.0, 0.3, 3.5])`
-is represented as follows:
+is represented as follows:[^zeroweight]
 
 | Level | Range | Elements |
 | - | - | - |
@@ -36,7 +38,7 @@ is represented as follows:
 | $4$ | $[0.25, 0.5)$ | `[5]` |
 
 Each level also tracks both the sum of its weights and its maximum weight for use in the sampling
-algorithm (details [below](#step-1:-cdf-sample-a-level)).
+algorithm (details [below](#step-1-cdf-sample-a-level)).
 
 | Level | Range | Elements | Sum | Max |
 | - | - | - | - | - |
@@ -49,11 +51,11 @@ Finally, the sampler tracks the sum of all its weights (or equivalently, the sum
 its levels); in this case, `s.sum = 9.8`.
 
 Given a vector $W$ of $n$ weights, initializing a `FlexleSampler` takes $Θ(n + \log(\frac{\max(W^+)}{\min(W^+)})$
-time; the second term—the $\log$ of the dynamic range of the weights—gives the time to create the
+time. The second term—the $\log$ of the dynamic range of the weights—gives the time to create the
 levels, and the first gives the time to populate them. While the the number of weights and the
 $\log$ of their dynamic range are not formally related, for common distributions the former tends
 to rapidly outpace the later as $n$ grows large, making `FlexleSampler` initialization generally
-linear in the number of weights.
+linear in the number of weights for large weights vectors.
 
 ## Sampling algorithm
 
@@ -75,8 +77,8 @@ algorithm whose runtime is linear in the number of weights. Its operation is as 
 The "weight" corresponding to each level is equal to the sum of the weights of its elements;
 this value is precomputed as part of the data structure. Because a `FlexleSampler` with weights
 $W$ contains $\lceil \log_2(\frac{\max(W^+)}{\min(W^+)}) \rceil + 1$ levels, this portion of the
-algorithm runs in $O(\log(\frac{\max(W^+)}{\min(W^+)}))$ time; in other words, time to sample is
-proportional to the $\log$ of the dynamic range of the weights.
+algorithm runs in $O(\log(\frac{\max(W^+)}{\min(W^+)}))$ time; for most common distributions of
+weights, this is far faster than $O(n)$.
 
 ### Step 2: Rejection sample an element from the level
 
@@ -85,13 +87,13 @@ as follows:
 
 1. Select a random $i \in [1 .. n]$.
 2. Select a random $r \in [0, m)$.
-3. If $V_i >= r$, return $i$. Else, return to step 1.
+3. If $V_i \geq r$, return $i$. Else, return to step 1.
 
 Once `Flexle.sample` has selected a level, the next step is to use rejection sampling on the
 elements in said level, taking advantage of the precomputed max of any weight in the level;
 the element selected through rejection sampling is that returned by `Flexle.sample`. 
 
-The runtime of rejection sampling depends on the number of iterations $T$, which is itself proportional
+The runtime of rejection sampling depends on the number of iterations $T$, which is itself a function of
 to the average probability of "rejecting" a choice of sample.
 
 $$E(T) = \sum_{t=1}^{\infty}{t \cdot P_\text{avg}(\text{reject})}^t$$
@@ -101,17 +103,19 @@ sample is $P(\text{reject}_i) = 1 - \frac{V_i}{m}$. The average probability of r
 
 $$P_\text{avg}(\text{reject}) = \frac{1}{n}\sum_{i=1}^{n}{(1 - \frac{V_i}{m})}$$
 
-Rejection sampling is therefore most efficient when the above value is minimized. By construction,
-the maximum weight in a `FlexleSampler` level is strictly less than double the minimum. The worst
-possible case for within-level rejection sampling, then, is when all of the following hold:
+Rejection sampling is most efficient when the above value (and thus the expected number of iterations)
+is minimized. By construction, the maximum weight in a `FlexleSampler` level is strictly less than double
+the minimum. The worst possible case for within-level rejection sampling, then, is when all of the following
+hold:
 
 - the number of elements in the level $n$ approaches infinity
-- one element (arbitrarily, say element 1) has a weight which approaches the level's upper bound $u$
-- every other element has a weight equal to the lower bound $l$
+- a finite number of elements (say elements 1 through $k$) have weights which approach the level's upper bound $u$
+  - accordingly, the maximum weight $m$ approaches $u$
+- every other element has a weight equal to the lower bound $l=\frac{u}{2}$
 
 In such a case, the average probability of rejection is given by:
 
-$$P_\text{avg}(\text{reject}) = \lim_{n \to \infty}[\frac{1}{n}\sum_{i=1}^{n}{(1 - \frac{V_i}{m})}] = (1 - \frac{V_1}{m}) + \lim_{n \to \infty}[\frac{1}{n}\sum_{i=2}^{n}{(1 - \frac{V_i}{m})}] = 1 - \frac{m}{m} + \frac{l}{u} = \frac{1}{2}$$
+$$P_\text{avg}(\text{reject}) = \lim_{m \to u}\lim_{n \to \infty}[\frac{1}{n}\sum_{i=1}^{n}{(1 - \frac{V_i}{m})}] = \lim_{m \to u}(\sum_{i=1}^{k}(1 - \frac{V_i}{m}) + \lim_{n \to \infty}[\frac{1}{n}\sum_{i=k+1}^{n}{(1 - \frac{V_i}{m})}]) = \lim_{m \to u}(k(1 - \frac{m}{m}) + \frac{l}{m}) = \frac{1}{2}$$
 
 The expected value of iterations in this case is therefore:
 
@@ -122,15 +126,30 @@ Within-level rejection sampling in a `FlexleSampler` therefore runs in expected 
 
 ### Summary
 
+`sample(::FlexleSampler)` is a two-part sampling algorithm that first CDF samples a level from a
+`FlexleSampler` and then rejection samples an element from the chosen level. The runtime is
+equivalent to the sum of the runtimes of the subalgorithms,
+$O(\log(\frac{\max(W^+)}{\min(W^+)})) + \Theta(1) = O(\log(\frac{\max(W^+)}{\min(W^+)}))$. The time
+to sample from a `FlexleSampler` is technically independent of the number of weights[^numweights] and instead depends
+only on the number of levels needed to store the weights, which is itself proportional to the $\log$
+of the ratio between the largest and smallest weights.
 
 
 [^terminology]: Defazio does not assign names to the data structure or algorithm he describes. For
 our purposes, we have named the data structure a "flexle sampler" (short for "flexible, binary-level
-sampler; implemented by the `FlexleSampler` struct in the Flexle package) and the corresponding
-algorithm "flexle sampling" (implemented by the `sample(::FlexleSampler)` method).
+sampler; implemented here by the `FlexleSampler` struct) and the corresponding algorithm "flexle
+sampling" (implemented by the `sample(::FlexleSampler)` method).
 
-[^fastlog2]: A third, minor benefit is that using powers of $2$ as bounds enables fast calculation
+[^fastlog2]: A third, minor benefit is that using powers of 2 as bounds enables fast calculation
 of the level in which a weight belongs using its IEEE 754 floating point representation; however, this
 is not essential to implementing the flexle sampler data structure efficiently.
 
+[^zeroweight]: What is stored in a level of the `FlexleSampler` is not the weights, but the indices
+of those elements in a separate weights `Vector` which have values fitting within the bounds of that level.
+Because of this, elements of weight 0 are supported—they simply are not placed in any level, and they are
+accordingly sampled with probability 0.
+
 [^max]: Strictly speaking, the maximum weight is undefined for levels containing no weights.
+
+[^numweights]: In practice, the dynamic range of the weights often increases as the number of weights
+increases, but this is not necessarily the case.
