@@ -12,9 +12,9 @@ Checks are as follows:
     - every index appearing in a level is an index that:
         - exists in `sampler.weights`, and if so,
         - belongs in this level according to its weight
-- construction of `index_positions` at each level in `sampler.levels`
-    - each index appears in the appropriate level's `index_positions` corresponding to its position in `level.indices`
-    - no index appears in an `index_positions` corresponding to a position at which it does not exist
+- construction of `element_positions` at each level in `sampler.levels`
+    - each index appears in the appropriate level's `element_positions` corresponding to its position in `level.elements`
+    - no index appears in an `element_positions` corresponding to a position at which it does not exist
 - `sampler` stats
     - each level's `sum` is (approximately) equal to the sum of the weights of the indexes it holds
     - each level's `max` is equal to the maximum of the weights of the indexes it holds
@@ -36,7 +36,7 @@ function verify(sampler::FlexleSampler; verbose::Bool=true, name::String="")
     # all weights in levels are represented in sampler.weights, and if so, in the correct level?
     num_weights = length(sampler.weights)
     for level in sampler.levels
-        for i in level.indices
+        for i in level.elements
             if !(1 <= i <= num_weights)
                 errors += 1
                 verbose && @printf "Error %i: index %i present in level (%f, %f) but not in weights\n" errors i level.bounds[1] level.bounds[2]
@@ -47,44 +47,44 @@ function verify(sampler::FlexleSampler; verbose::Bool=true, name::String="")
         end
     end
 
-    # all indices in levels recorded correctedly in index_positions?
-    d = sampler.index_positions
+    # all elements in levels recorded correctedly in element_positions?
+    d = sampler.element_positions
     for level in sampler.levels
-        for pos in eachindex(level.indices)
-            idx = level.indices[pos]
+        for pos in eachindex(level.elements)
+            idx = level.elements[pos]
             if d[idx] != pos
                 errors += 1
-                verbose && @printf "Error %i: element %i (level (%f, %f), weight %f) not recorded as position %i in index_positions\n" errors idx level.bounds[1] level.bounds[2] sampler.weights[idx] pos
+                verbose && @printf "Error %i: element %i (level (%f, %f), weight %f) not recorded as position %i in element_positions\n" errors idx level.bounds[1] level.bounds[2] sampler.weights[idx] pos
             end
         end
     end
     for idx in eachindex(d)
         pos = d[idx]
         level = Flexle.get_level(sampler.weights[idx], sampler)
-        if !iszero(pos) && ((pos > length(level.indices)) || !(level.indices[pos] == idx))
+        if !iszero(pos) && ((pos > length(level.elements)) || !(level.elements[pos] == idx))
             errors += 1
-            verbose && @printf "Error %i: element %i (level (%f, %f), weight %f) incorrectly recorded as position %i in index_positions\n" errors idx level.bounds[1] level.bounds[2] sampler.weights[idx] pos
+            verbose && @printf "Error %i: element %i (level (%f, %f), weight %f) incorrectly recorded as position %i in element_positions\n" errors idx level.bounds[1] level.bounds[2] sampler.weights[idx] pos
         end
     end
 
     # all recorded stats correct?
     overall_sum = 0.0
     for level in sampler.levels
-        empty = isempty(level.indices)
-        expected_sum = empty ? 0.0 : sum(sampler.weights[i] for i in level.indices)
+        empty = isempty(level.elements)
+        expected_sum = empty ? 0.0 : sum(sampler.weights[i] for i in level.elements)
         if !Flexle.approxeq(expected_sum, level.sum)
             errors += 1
             verbose && @printf "Error %i: level (%f, %f) sum incorrect (expected %f, got %f)\n" errors level.bounds[1] level.bounds[2] expected_sum level.sum
         end
         overall_sum += expected_sum
 
-        expected_max = empty ? 0.0 : maximum(sampler.weights[i] for i in level.indices)
+        expected_max = empty ? 0.0 : maximum(sampler.weights[i] for i in level.elements)
         if expected_max != level.max
             errors += 1
             verbose && @printf "Error %i: level (%f, %f) max incorrect (expected %f, got %f)\n" errors level.bounds[1] level.bounds[2] expected_max level.max
         end
 
-        expected_num_max = count(x -> sampler.weights[x]==level.max, level.indices)
+        expected_num_max = count(x -> sampler.weights[x]==level.max, level.elements)
         if expected_num_max != level.num_max
             errors += 1
             verbose && @printf "Error %i: level (%f, %f) num_max incorrect (expected %f, got %f)\n" errors level.bounds[1] level.bounds[2] expected_num_max level.num_max
@@ -171,14 +171,14 @@ function testFlexleSampler(seed=0)
     # print_flexle_sampler(samplers[end])
     verify(samplers[end], name="(move test, pre-move)")
 
-    # between two levels - element in middle of indices vector
+    # between two levels - element in middle of elements vector
     idx = 24
     w_new = 24.0 # now belongs in (16.0, 32.0) instead of (32.0, 64.0)
     samplers[end][idx] = w_new
     # print_flexle_sampler(samplers[end])
     verify(samplers[end], name="(move test, changed weights[24] from 36.0 to 24.0)")
 
-    # between two levels - element at end of indices vector
+    # between two levels - element at end of elements vector
     idx = 85
     w_new = 60.0 # now belongs in (32.0, 64.0) instead of (64.0, 128.0)
     samplers[end][idx] = w_new
@@ -304,7 +304,7 @@ For default value `n=1`, each index is simply assigned the probability of its se
 function indexSamplingExpectedValue(level::Flexle.FlexLevel, weights::Vector{Float64}; n::Int64=1)
     norm = Float64(n) / level.sum
     d = Dict{Int64,Float64}()
-    for i in level.indices
+    for i in level.elements
         d[i] = norm * weights[i]
     end
     return d
@@ -317,7 +317,7 @@ Randomly select an index from `level` `n` times according to `weights` and retur
 """
 function testIndexSampling(level::Flexle.FlexLevel, weights::Vector{Float64}, n::Int64)
     d = Dict{Int64,Int64}()
-    for i in level.indices
+    for i in level.elements
         d[i] = 0
     end
 

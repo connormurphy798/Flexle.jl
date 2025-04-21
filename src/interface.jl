@@ -34,7 +34,7 @@ function FlexleSampler(weights::AbstractVector{Float64})
     num_levels = uppermost_log_bound - floor_log2(w_min)     # e.g. -2,5 ==> 7 levels [4,3,2,1,0,-1,-2]
     
     levels = Vector{FlexLevel}(undef, num_levels)   # add check for unreasonable number of levels before allocating space?
-    index_positions = zeros(Int64, length(w_vector))
+    element_positions = zeros(Int64, length(w_vector))
 
     lower_bound = lower_power_of_2_bound(w_min)
     for i in num_levels:-1:1
@@ -47,7 +47,7 @@ function FlexleSampler(weights::AbstractVector{Float64})
         w::Float64 = w_vector[i]
         iszero(w) && continue
         l = levels[level_index(w, uppermost_log_bound)]
-        push!(l.indices, i)
+        push!(l.elements, i)
         if w == l.max
             l.num_max += 1
         elseif w > l.max
@@ -55,11 +55,11 @@ function FlexleSampler(weights::AbstractVector{Float64})
             l.num_max = 1
         end
         l.sum += w
-        index_positions[i] = length(l.indices)
+        element_positions[i] = length(l.elements)
         w_sum += w
     end
 
-    return FlexleSampler(levels, w_vector, w_sum, index_positions, uppermost_log_bound)
+    return FlexleSampler(levels, w_vector, w_sum, element_positions, uppermost_log_bound)
 end
 
 """
@@ -163,7 +163,7 @@ function Base.push!(sampler::FlexleSampler, w::Float64)
         to = get_level(bounds, sampler)
         add_to_FlexLevel!(length(sampler.weights), to, sampler)
     else
-        push!(sampler.index_positions, 0)
+        push!(sampler.element_positions, 0)
     end
     return length(sampler.weights)
 end
@@ -186,15 +186,15 @@ function Base.deleteat!(sampler::FlexleSampler, i::Int64)
     end
     deleteat!(sampler.weights, i)
     for level in sampler.levels
-        indices = level.indices
-        for j in eachindex(indices)
-            if indices[j] > i
-                indices[j] -= 1
+        elements = level.elements
+        for j in eachindex(elements)
+            if elements[j] > i
+                elements[j] -= 1
             end
         end
     end
-    deleteat!(sampler.index_positions, i)
-    if !iszero(w) && (from === sampler.levels[begin] || from === sampler.levels[end]) && isempty(from.indices)
+    deleteat!(sampler.element_positions, i)
+    if !iszero(w) && (from === sampler.levels[begin] || from === sampler.levels[end]) && isempty(from.elements)
         trim_trailing_levels!(sampler)
     end
     return length(sampler.weights)

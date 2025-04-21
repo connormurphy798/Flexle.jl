@@ -43,11 +43,11 @@ include("test_runtime.jl")
     @testset "setindex! (update existing weights)" begin
         s = FlexleSampler([(i==27 ? 0.0 : 1.5 * i) for i in 1:100])
 
-        # move between two levels - element in middle of indices vector
+        # move between two levels - element in middle of elements vector
         s[24] = 24.0
         @test verify(s, verbose=false) == 0
 
-        # move between two levels - element at end of indices vector
+        # move between two levels - element at end of elements vector
         s[85] = 60.0
         @test verify(s, verbose=false) == 0
 

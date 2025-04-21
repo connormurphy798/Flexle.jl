@@ -16,14 +16,14 @@ mutable struct FlexLevel
     sum::Float64
     max::Float64
     num_max::Int64
-    indices::Vector{Int64}
+    elements::Vector{Int64}
 end
 
 mutable struct FlexleSampler
     levels::Vector{FlexLevel}
     weights::Vector{Float64}
     sum::Float64
-    index_positions::Vector{Int64}
+    element_positions::Vector{Int64}
     max_log2_upper_bound::Union{Int64, Nothing}     # nothing when levels is empty
 end
 
@@ -187,7 +187,7 @@ Return a `Bool` indicating whether an index `i` is present at some `FlexLevel` i
 """
 function in_sampler(i::Int64, sampler::FlexleSampler)
     for level in sampler.levels
-        if i in level.indices
+        if i in level.elements
             return true
         end
     end
@@ -209,7 +209,7 @@ end
 Return a `Bool` indicating whether `level` contains any elements.
 """
 function level_is_populated(level::FlexLevel)
-    return !isempty(level.indices)
+    return !isempty(level.elements)
 end
 
 """
@@ -221,7 +221,7 @@ function max_level_weight(level::FlexLevel, sampler::FlexleSampler)
     m::Float64 = 0.0
     weights::Vector{Float64} = sampler.weights
     n::Int64 = 0
-    for i in level.indices
+    for i in level.elements
         w = weights[i]
         if w == m
             n += 1
@@ -252,7 +252,7 @@ function print_flexle_sampler(sampler::FlexleSampler; name::String="")
             @printf "\nLevel (%f, %f)\n" l.bounds[1] l.bounds[2]
             @printf "sum=%f\n" l.sum
             @printf "max=%f\n" l.max
-            println(l.indices)
+            println(l.elements)
         end
     end
 end
@@ -312,7 +312,7 @@ This option is provided for performance purposes, as reading and writing to `sam
 `sampler.sum` themselves if calling with `update_sampler_sum=false`.
 """
 function add_to_FlexLevel!(i::Int64, level::FlexLevel, sampler::FlexleSampler; update_sampler_sum::Bool=true)
-    push!(level.indices, i)
+    push!(level.elements, i)
     w::Float64 = sampler.weights[i]
     level.sum += w
     (update_sampler_sum) && (sampler.sum += w)
@@ -322,10 +322,10 @@ function add_to_FlexLevel!(i::Int64, level::FlexLevel, sampler::FlexleSampler; u
     elseif w == level.max
         level.num_max += 1
     end
-    if i <= length(sampler.index_positions)
-        sampler.index_positions[i] = length(level.indices)
+    if i <= length(sampler.element_positions)
+        sampler.element_positions[i] = length(level.elements)
     else
-        push!(sampler.index_positions, length(level.indices))
+        push!(sampler.element_positions, length(level.elements))
     end
 end
 
@@ -351,14 +351,14 @@ This option is provided for performance purposes, as reading and writing to `sam
 """
 function remove_from_FlexLevel!(i::Int64, level::FlexLevel, sampler::FlexleSampler; update_sampler_sum::Bool=true)
     w::Float64 = sampler.weights[i]
-    len = length(level.indices)
-    idx = sampler.index_positions[i]
-    last = pop!(level.indices)
+    len = length(level.elements)
+    idx = sampler.element_positions[i]
+    last = pop!(level.elements)
     if idx != len   # take last index and put it in the place of the one to be removed, unless the last one is itself to be removed
-        level.indices[idx] = last
-        sampler.index_positions[last] = idx
+        level.elements[idx] = last
+        sampler.element_positions[last] = idx
     end
-    sampler.index_positions[i] = 0
+    sampler.element_positions[i] = 0
     level.sum -= w
     (update_sampler_sum) && (sampler.sum -= w)
     if !level_is_populated(level)
@@ -473,18 +473,18 @@ and a `Vector` of `weights`.
 performed prior to rejection sampling.
 """
 @inline function rejection_sample(rand_n::Float64, level::FlexLevel, weights::Vector{Float64})
-    # l = Float64(length(level.indices))
+    # l = Float64(length(level.elements))
     # while true
     #     r = rand_n * l
     #     i::Int64, r_floor::Float64 = fast_Int64(r)
-    #     idx = level.indices[i + 1]   # +1 to offset for 1-indexing
+    #     idx = level.elements[i + 1]   # +1 to offset for 1-indexing
     #     if weights[idx] > (r - r_floor) * level.max
     #         return idx
     #     end
     #     rand_n = rand()
     # end
     while true
-        i = rand(level.indices)
+        i = rand(level.elements)
         if weights[i] > rand_n * level.max
             return i
         end
