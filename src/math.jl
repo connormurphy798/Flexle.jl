@@ -39,21 +39,8 @@ function approxeq(a::Float64, b::Float64; t::Float64=1e-9)
     return abs(a-b) < t
 end
 
-"""
-    lower_power_of_2_bound(n)
-
-Get the largest power of 2 less than or equal to a non-negative `n`.
-
-# Examples
-
-`lower_power_of_2_bound(33.0)` ==> `32.0`
-
-`lower_power_of_2_bound(32.0)` ==> `32.0`
-
-`lower_power_of_2_bound(0.75)` ==> `0.5`
-"""
-function lower_power_of_2_bound(n::Float64)
-    return reinterpret(Float64, n & EXPONENT_MASK_FLOAT64)
+function approxeq(a::Int64, b::Int64)
+    return a==b
 end
 
 """
@@ -73,6 +60,31 @@ function floor_log2(n::Float64)
     return ((n & EXPONENT_MASK_FLOAT64) >> EXPONENT_SHIFT_FLOAT64) - EXPONENT_OFFSET_FLOAT64
 end
 
+function floor_log2(n::Int64)
+    return 63 - leading_zeros(n)
+end
+
+"""
+    lower_power_of_2_bound(n)
+
+Get the largest power of 2 less than or equal to a non-negative `n`.
+
+# Examples
+
+`lower_power_of_2_bound(33.0)` ==> `32.0`
+
+`lower_power_of_2_bound(32.0)` ==> `32.0`
+
+`lower_power_of_2_bound(0.75)` ==> `0.5`
+"""
+function lower_power_of_2_bound(n::Float64)
+    return reinterpret(Float64, n & EXPONENT_MASK_FLOAT64)
+end
+
+function lower_power_of_2_bound(n::Int64)
+    return 1 << floor_log2(n)
+end
+
 """
     logbounds(n)
 
@@ -81,6 +93,11 @@ Return a tuple `l,u` giving two adjacent powers of 2 such that `l <= n < u`.
 function logbounds(n::Float64)
     l = lower_power_of_2_bound(n)
     return l, l*2.0
+end
+
+function logbounds(n::Int64)
+    l = lower_power_of_2_bound(n)
+    return l, l << 1
 end
 
 """
@@ -101,7 +118,7 @@ starts with a level of bounds `(32.0, 64.0)` (`64` being `2^6`) is at `levels[3]
 
 `level_index(8.0, 5)` ==> `2`
 """
-function level_index(w::Float64, u::Union{Int64, Nothing})
+function level_index(w::T, u::Union{Int64, Nothing}) where {T<:WeightNumber}
     return iszero(w) || isnothing(u) ? 0 : u - floor_log2(w)
 end
 
@@ -112,7 +129,7 @@ Get the index of the `FlexLevel` that has bounds given by `bounds` in some `Flex
 
 Returns `0` if no such level exists.
 """
-function level_index(bounds::Tuple{Float64,Float64}, u::Union{Int64, Nothing})
+function level_index(bounds::Tuple{T,T}, u::Union{Int64, Nothing}) where {T<:WeightNumber}
     return level_index(bounds[1], u)
 end
 
@@ -123,7 +140,7 @@ Return the `FlexLevel` in `sampler.levels` with bounds given by `bounds`.
 
 Returns `nothing` if no such level exists.
 """
-function get_level(bounds::Tuple{Float64,Float64}, sampler::FlexleSampler)
+function get_level(bounds::Tuple{T,T}, sampler::FlexleSampler{T}) where {T<:WeightNumber}
     l = level_index(bounds[1], sampler.max_log2_upper_bound)
     return l==0 ? nothing : sampler.levels[l]
 end
@@ -135,7 +152,7 @@ Return the `FlexLevel` in `sampler.levels` where a weight `w` would belong.
 
 Returns `nothing` if no such level exists.
 """
-function get_level(w::Float64, sampler::FlexleSampler)
+function get_level(w::T, sampler::FlexleSampler{T}) where {T<:WeightNumber}
     l = level_index(w, sampler.max_log2_upper_bound)
     return l==0 ? nothing : sampler.levels[l]
 end
@@ -145,7 +162,7 @@ end
 
 Return the floor of the log2 of `a/b`. 
 """
-function log_dist(a::Float64, b::Float64)
+function log_dist(a::T, b::T) where {T<:WeightNumber}
     return floor_log2(b) - floor_log2(a)
 end
 
@@ -154,7 +171,7 @@ end
 
 Return a `Bool` indicating whether an index `i` is present at some `FlexLevel` in `sampler`.
 """
-function in_sampler(i::Int64, sampler::FlexleSampler)
+function in_sampler(i::Int64, sampler::FlexleSampler{T}) where {T<:WeightNumber}
     for level in sampler.levels
         if i in level.elements
             return true
@@ -168,7 +185,7 @@ end
 
 Return a `Bool` indicating whether a `FlexLevel` with bounds `bounds` is present in `sampler`.
 """
-function in_sampler(bounds::Tuple{Float64,Float64}, sampler::FlexleSampler)
+function in_sampler(bounds::Tuple{T,T}, sampler::FlexleSampler{T}) where {T<:WeightNumber}
     return (length(sampler.levels) > 0 && sampler.levels[begin].bounds[1] >= bounds[1]) && (bounds[1] >= sampler.levels[end].bounds[1]) # bounds between largest and smallest levels' bounds (inclusive)
 end
 
@@ -186,9 +203,9 @@ end
 
 Get the largest weight in `sampler` of any element in `level` and the number of times it occurs.
 """
-function max_level_weight(level::FlexLevel, sampler::FlexleSampler)
-    m::Float64 = 0.0
-    weights::Vector{Float64} = sampler.weights
+function max_level_weight(level::FlexLevel{T}, sampler::FlexleSampler{T}) where {T<:WeightNumber}
+    m::T = zero(T)
+    weights::Vector{T} = sampler.weights
     n::Int64 = 0
     for i in level.elements
         w = weights[i]

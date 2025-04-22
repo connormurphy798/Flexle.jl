@@ -25,9 +25,9 @@ sampler.sum += new_i_weight - old_i_weight
 This option is provided for performance purposes, as reading and writing to `sampler.sum` can be expensive. The caller MUST update
 `sampler.sum` themselves if calling with `update_sampler_sum=false`.
 """
-function add_to_FlexLevel!(i::Int64, level::FlexLevel, sampler::FlexleSampler; update_sampler_sum::Bool=true)
+function add_to_FlexLevel!(i::Int64, level::FlexLevel{T}, sampler::FlexleSampler{T}; update_sampler_sum::Bool=true) where {T<:WeightNumber}
     push!(level.elements, i)
-    w::Float64 = sampler.weights[i]
+    w::T = sampler.weights[i]
     level.sum += w
     (update_sampler_sum) && (sampler.sum += w)
     if w > level.max
@@ -63,8 +63,8 @@ sampler.sum += new_i_weight - old_i_weight
 This option is provided for performance purposes, as reading and writing to `sampler.sum` can be expensive. The caller MUST update
 `sampler.sum` themselves if calling with `update_sampler_sum=false`.
 """
-function remove_from_FlexLevel!(i::Int64, level::FlexLevel, sampler::FlexleSampler; update_sampler_sum::Bool=true)
-    w::Float64 = sampler.weights[i]
+function remove_from_FlexLevel!(i::Int64, level::FlexLevel{T}, sampler::FlexleSampler{T}; update_sampler_sum::Bool=true) where {T<:WeightNumber}
+    w::T = sampler.weights[i]
     len = length(level.elements)
     idx = sampler.element_positions[i]
     last = pop!(level.elements)
@@ -76,7 +76,7 @@ function remove_from_FlexLevel!(i::Int64, level::FlexLevel, sampler::FlexleSampl
     level.sum -= w
     (update_sampler_sum) && (sampler.sum -= w)
     if !level_is_populated(level)
-        level.max = 0.0
+        level.max = zero(T)
         level.num_max = 0
     elseif w == level.max
         level.num_max -= 1
@@ -93,17 +93,17 @@ Extend `sampler.levels` to contain all appropriate `FlexLevel`s up to and includ
 
 Throws an error if a level with such bounds already exists in `levels`.
 """
-function extend_levels!(bounds::Tuple{Float64,Float64}, sampler::FlexleSampler)
-    if bounds[1] * 2.0 != bounds[2]
+function extend_levels!(bounds::Tuple{T,T}, sampler::FlexleSampler{T}) where {T<:WeightNumber}
+    if bounds[1] * 2 != bounds[2]
         throw("Invalid bounds - must be two adjacent powers of 2")
     end
 
     l_bound = bounds[1]
     if length(sampler.levels) == 0
         num_new_levels = 1
-        post = Vector{FlexLevel}(undef, num_new_levels)
-        u_bound = l_bound * 2.0
-        post[1] = FlexLevel((l_bound, u_bound), 0.0, 0.0, 0, Vector{Int64}())
+        post = Vector{FlexLevel{T}}(undef, num_new_levels)
+        u_bound = l_bound * 2
+        post[1] = FlexLevel{T}((l_bound, u_bound), zero(T), zero(T), 0, Vector{Int64}())
         l_bound = u_bound
         append!(sampler.levels, post)
     else
@@ -111,19 +111,19 @@ function extend_levels!(bounds::Tuple{Float64,Float64}, sampler::FlexleSampler)
         extend_down = l_bound < sampler.levels[end].bounds[1]
         if extend_up
             num_new_levels = log_dist(sampler.levels[begin].bounds[1], l_bound)
-            pre = Vector{FlexLevel}(undef, num_new_levels)
+            pre = Vector{FlexLevel{T}}(undef, num_new_levels)
             for i in 1:num_new_levels
-                u_bound = l_bound * 2.0
-                pre[i] = FlexLevel((l_bound, u_bound), 0.0, 0.0, 0, Vector{Int64}())
-                l_bound /= 2.0
+                u_bound = l_bound * 2
+                pre[i] = FlexLevel((l_bound, u_bound), zero(T), zero(T), 0, Vector{Int64}())
+                l_bound /= 2
             end
             prepend!(sampler.levels, pre)
         elseif extend_down
             num_new_levels = log_dist(l_bound, sampler.levels[end].bounds[1])
-            post = Vector{FlexLevel}(undef, num_new_levels)
+            post = Vector{FlexLevel{T}}(undef, num_new_levels)
             for i in num_new_levels:-1:1
-                u_bound = l_bound * 2.0
-                post[i] = FlexLevel((l_bound, u_bound), 0.0, 0.0, 0, Vector{Int64}())
+                u_bound = l_bound * 2
+                post[i] = FlexLevel{T}((l_bound, u_bound), zero(T), zero(T), 0, Vector{Int64}())
                 l_bound = u_bound
             end
             append!(sampler.levels, post)
@@ -139,10 +139,10 @@ end
 
 Remove all empty `FlexLevel`s from the front and back of `sampler`.
 """
-function trim_trailing_levels!(sampler::FlexleSampler)
+function trim_trailing_levels!(sampler::FlexleSampler{T}) where {T<:WeightNumber}
     first = findfirst(level_is_populated, sampler.levels)
     if isnothing(first)
-        sampler.levels = Vector{FlexLevel}()
+        sampler.levels = Vector{FlexLevel{T}}()
         sampler.max_log2_upper_bound = nothing
     else
         last = findlast(level_is_populated, sampler.levels)
@@ -158,7 +158,7 @@ Verbosely print `sampler` with optional label `name`.
 
 Only used in testing; for end user printing, see [`Base.show`](@ref).
 """
-function print_flexle_sampler(sampler::FlexleSampler; name::String="")
+function print_flexle_sampler(sampler::FlexleSampler{Float64}; name::String="")
     @printf "\nFlexleSampler %s\n" name
     show(sampler.weights)
     @printf "\nSum %f" sampler.sum
@@ -175,17 +175,34 @@ function print_flexle_sampler(sampler::FlexleSampler; name::String="")
     end
 end
 
-function Base.show(io::IO, sampler::FlexleSampler)
+function print_flexle_sampler(sampler::FlexleSampler{Int64}; name::String="")
+    @printf "\nFlexleSampler %s\n" name
+    show(sampler.weights)
+    @printf "\nSum %i" sampler.sum
+    println()
+    if isempty(sampler.levels)
+        println("(sampler contains no levels)")
+    else
+        for l in sampler.levels
+            @printf "\nLevel (%i, %i)\n" l.bounds[1] l.bounds[2]
+            @printf "sum=%i\n" l.sum
+            @printf "max=%i\n" l.max
+            println(l.elements)
+        end
+    end
+end
+
+function Base.show(io::IO, sampler::FlexleSampler{T}) where {T<:WeightNumber}
     l = length(sampler.weights)
     print(io, "FlexleSampler ($l weights)")
 end
 
-function print_weight(io::IO, sampler::FlexleSampler, i::Int64, l::Int64, pad::Int64)
+function print_weight(io::IO, sampler::FlexleSampler{T}, i::Int64, l::Int64, pad::Int64) where {T<:WeightNumber}
     cap = i==l ? "" : "\n"
-    print(io, lpad("$i", pad, " ") * ": $(sampler.weights[i])$cap")
+    print(io, lpad("$i", pad, " ") * ": $(sampler.weights[i])$cap")  
 end
 
-function Base.show(io::IO, ::MIME"text/plain", sampler::FlexleSampler)
+function Base.show(io::IO, ::MIME"text/plain", sampler::FlexleSampler{T}) where {T<:WeightNumber}
     l = length(sampler.weights)
     pad = 4 + ndigits(l)
     colon = iszero(l) ? "" : ":"

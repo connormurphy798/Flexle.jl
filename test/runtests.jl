@@ -12,36 +12,41 @@ include("test_runtime.jl")
 
 @testset verbose=true "FlexleSampler initialization/maintenance" begin
     @testset "FlexleSampler (initialize sampler from weights)" begin
-        s = FlexleSampler(rand(100))
+        s = FlexleSampler{Float64}(rand(100))
         @test verify(s, verbose=false) == 0
 
-        s = FlexleSampler(zeros(100))
+        s = FlexleSampler{Float64}(zeros(100))
         @test verify(s, verbose=false) == 0
 
-        s = FlexleSampler(zeros(100) .+ [((n >= 0.5) || (n < 0.25) ? n : 0.0) for n in rand(100)])
+        s = FlexleSampler{Float64}(zeros(100) .+ [((n >= 0.5) || (n < 0.25) ? n : 0.0) for n in rand(100)])
         @test verify(s, verbose=false) == 0
 
-        s = FlexleSampler(ones(100) .* 1.5)
+        s = FlexleSampler{Float64}(ones(100) .* 1.5)
         @test verify(s, verbose=false) == 0
 
-        s = FlexleSampler([10000.0 - 3.5*i for i in 1:1000])
+        s = FlexleSampler{Float64}([10000.0 - 3.5*i for i in 1:1000])
         @test verify(s, verbose=false) == 0
 
-        s = FlexleSampler(Vector{Float64}())
+        s = FlexleSampler{Float64}(Vector{Float64}())
+        @test verify(s, verbose=false) == 0
+
+        s = FlexleSampler{Int64}([5, 7, 1, 0, 0, 9, 0, 2, 10, 16, 400, 1, 0, 90])
         @test verify(s, verbose=false) == 0
     end
 
     @testset "getindex (get existing weight)" begin
-        s = FlexleSampler([100.0 - 2*i for i in 1:30])
+        s = FlexleSampler{Float64}([100.0 - 2*i for i in 1:30])
 
         @test s[1] == 98.0
         @test s[2] == 96.0
         @test s[30] == 40.0
 
+        s = FlexleSampler{Int64}([3*i for i in 1:15])
+        @test s[3] == 9
     end
 
     @testset "setindex! (update existing weights)" begin
-        s = FlexleSampler([(i==27 ? 0.0 : 1.5 * i) for i in 1:100])
+        s = FlexleSampler{Float64}([(i==27 ? 0.0 : 1.5 * i) for i in 1:100])
 
         # move between two levels - element in middle of elements vector
         s[24] = 24.0
@@ -80,7 +85,7 @@ include("test_runtime.jl")
     end
     
     @testset "push! (add new weight)" begin
-        s = FlexleSampler([rand()*10 for i in 1:1000])
+        s = FlexleSampler{Float64}([rand()*10 for i in 1:1000])
 
         l = push!(s, 110.0)
         @test (verify(s, verbose=false) == 0) && (s[length(s.weights)] == 110.0)
@@ -99,7 +104,7 @@ include("test_runtime.jl")
     end
 
     @testset "deleteat! (remove existing weight)" begin
-        s = FlexleSampler([2.5, 6.0, 70.0, 0.001, 0.0, 4.2, 1.1])
+        s = FlexleSampler{Float64}([2.5, 6.0, 70.0, 0.001, 0.0, 4.2, 1.1])
 
         deleteat!(s, 2)     # 6.0, remove from level w/o emptying
         @test (verify(s, verbose=false) == 0) && (length(s.weights) == 6)
@@ -122,7 +127,7 @@ include("test_runtime.jl")
         deleteat!(s, 1)     # 1.1, empty sampler
         @test (verify(s, verbose=false) == 0) && (length(s.weights) == 0)
 
-        s = FlexleSampler([0.0, 2.0, 0.0, 1.0, 1.0, 0.0, 2.0, 2.0, 1.0, 0.0, 0.0, 1.0, 1.0])
+        s = FlexleSampler{Float64}([0.0, 2.0, 0.0, 1.0, 1.0, 0.0, 2.0, 2.0, 1.0, 0.0, 0.0, 1.0, 1.0])
         for i in 1:numweights(s)
             deleteat!(s, 1)
             @test (verify(s, verbose=false) == 0)
@@ -131,7 +136,7 @@ include("test_runtime.jl")
 end
 
 @testset "Flexle stats" begin
-    s = FlexleSampler([2.0*i for i in 1:5])
+    s = FlexleSampler{Float64}([2.0*i for i in 1:5])
 
     @test s[2] == 4.0
     @test s[5] == 10.0
@@ -155,10 +160,10 @@ end
     # each p-value tests will fail ~alpha% of the time by chance.
     # correspondingly, the chance of _no_ tests failing is (1-alpha)^num_tests (~96% for 4 @ alpha=0.01)
 
-    s = FlexleSampler([rand() for _ in 1:20])
+    s = FlexleSampler{Float64}([rand() for _ in 1:20])
     @test pvalue(flexleChiSquared(s)) > alpha
 
-    s = FlexleSampler([20.0-i for i in 1:20])
+    s = FlexleSampler{Float64}([20.0-i for i in 1:20])
     @test pvalue(flexleChiSquared(s)) > alpha
 
     push!(s, 6.7)
@@ -167,10 +172,10 @@ end
     s[3] = 10.1
     @test pvalue(flexleChiSquared(s)) > alpha
 
-    s = FlexleSampler(vcat(zeros(10), [1.0], zeros(5), [2.0]))
+    s = FlexleSampler{Float64}(vcat(zeros(10), [1.0], zeros(5), [2.0]))
     @test pvalue(flexleChiSquared(s)) > alpha
 
-    s = FlexleSampler(zeros(1000))
+    s = FlexleSampler{Float64}(zeros(1000))
     @test_throws DomainError flexleChiSquared(s)    # can't sample from all-0 distribution
 
 

@@ -3,24 +3,25 @@
 using Random
 
 """
-    FlexleSampler(weights)
+    FlexleSampler{T}(weights)
 
 Create a `FlexleSampler` from a `Vector` of `weights`.
 """
-function FlexleSampler(weights::AbstractVector{Float64})
+function FlexleSampler{T}(weights::Vector{T}) where {T<:WeightNumber}
     w_vector = Vector(weights)
-    w_sum = 0.0
+    w_zero = zero(T)
+    w_sum = w_zero
 
     if length(w_vector) == 0
-        return FlexleSampler(Vector{FlexLevel}(), w_vector, w_sum, Vector{Int64}(), nothing)
+        return FlexleSampler(Vector{FlexLevel{T}}(), w_vector, w_sum, Vector{Int64}(), nothing)
     end
 
     weights_nonzero = filter(x -> !iszero(x), weights)
     if isempty(weights_nonzero)
-        return FlexleSampler(Vector{FlexLevel}(), w_vector, w_sum, zeros(Int64, length(w_vector)), nothing)
+        return FlexleSampler(Vector{FlexLevel{T}}(), w_vector, w_sum, zeros(Int64, length(w_vector)), nothing)
     end
     
-    w_min, w_max = Inf, 0.0
+    w_min, w_max = typemax(T), w_zero
     for w in weights_nonzero
         (w < w_min) && (w_min = w)
         (w > w_max) && (w_max = w)
@@ -33,18 +34,18 @@ function FlexleSampler(weights::AbstractVector{Float64})
     end
     num_levels = uppermost_log_bound - floor_log2(w_min)     # e.g. -2,5 ==> 7 levels [4,3,2,1,0,-1,-2]
     
-    levels = Vector{FlexLevel}(undef, num_levels)   # add check for unreasonable number of levels before allocating space?
+    levels = Vector{FlexLevel{T}}(undef, num_levels)   # add check for unreasonable number of levels before allocating space?
     element_positions = zeros(Int64, length(w_vector))
 
     lower_bound = lower_power_of_2_bound(w_min)
     for i in num_levels:-1:1
-        upper_bound = lower_bound * 2.0
-        levels[i] = FlexLevel((lower_bound, upper_bound), 0.0, 0.0, 0, Vector{Int64}())
+        upper_bound = lower_bound * 2
+        levels[i] = FlexLevel{T}((lower_bound, upper_bound), w_zero, w_zero, 0, Vector{Int64}())
         lower_bound = upper_bound
     end
 
     for i in eachindex(w_vector)
-        w::Float64 = w_vector[i]
+        w::T = w_vector[i]
         iszero(w) && continue
         l = levels[level_index(w, uppermost_log_bound)]
         push!(l.elements, i)
@@ -59,7 +60,11 @@ function FlexleSampler(weights::AbstractVector{Float64})
         w_sum += w
     end
 
-    return FlexleSampler(levels, w_vector, w_sum, element_positions, uppermost_log_bound)
+    return FlexleSampler{T}(levels, w_vector, w_sum, element_positions, uppermost_log_bound)
+end
+
+function FlexleSampler(weights::Vector{T}) where {T<:WeightNumber}
+    return FlexleSampler{T}(weights)
 end
 
 """
@@ -67,8 +72,8 @@ end
 
 Create an empty `FlexleSampler`.
 """
-function FlexleSampler()
-    return FlexleSampler(Vector{Float64}())
+function FlexleSampler(; T=Float64)
+    return FlexleSampler{T}(Vector{T}())
 end
 
 """
@@ -76,7 +81,7 @@ end
 
 Get the weight of element `i` in `sampler`.
 """
-function Base.getindex(sampler::FlexleSampler, i::Int64)
+function Base.getindex(sampler::FlexleSampler{T}, i::Int64) where {T<:WeightNumber}
     return sampler.weights[i]
 end
 
@@ -85,12 +90,12 @@ end
 
 Set the weight of element `i` in `sampler` equal to `w`, returning the difference between the new and old values of `i`.
 """
-function Base.setindex!(sampler::FlexleSampler, w::Float64, i::Int64)
-    from::Union{Nothing, FlexLevel} = nothing
-    to::Union{Nothing, FlexLevel} = nothing
+function Base.setindex!(sampler::FlexleSampler{T}, w::T, i::Int64) where {T<:WeightNumber}
+    from::Union{Nothing, FlexLevel{T}} = nothing
+    to::Union{Nothing, FlexLevel{T}} = nothing
     levels = sampler.levels
-    w_old::Float64 = sampler.weights[i]
-    delta::Float64 = w - w_old
+    w_old::T = sampler.weights[i]
+    delta::T = w - w_old
     nonzero = !iszero(w_old), !iszero(w)
     if nonzero[1]
         from = get_level(w_old, sampler)
@@ -133,7 +138,7 @@ end
 
 Get the `Vector` of all the weights in `sampler`.
 """
-function getweights(sampler::FlexleSampler)
+function getweights(sampler::FlexleSampler{T}) where {T<:WeightNumber}
     return sampler.weights
 end
 
@@ -142,7 +147,7 @@ end
 
 Get the number of weights in `sampler`.
 """
-function numweights(sampler::FlexleSampler)
+function numweights(sampler::FlexleSampler{T}) where {T<:WeightNumber}
     return length(sampler.weights)
 end
 
@@ -153,7 +158,7 @@ Add a new element with weight `w` to `sampler`, updating all fields accordingly.
 
 Returns the new number of weights in `sampler`, or equivalently, the index corresponding to the new element added.
 """
-function Base.push!(sampler::FlexleSampler, w::Float64)
+function Base.push!(sampler::FlexleSampler{T}, w::T) where {T<:WeightNumber}
     push!(sampler.weights, w)
     if !iszero(w)
         bounds = logbounds(w)
@@ -177,8 +182,8 @@ Returns the new number of weights in `sampler`.
 
 All elements of index `>i` are updated to account for the removal of element `i`.
 """
-function Base.deleteat!(sampler::FlexleSampler, i::Int64)
-    w::Float64 = sampler.weights[i]
+function Base.deleteat!(sampler::FlexleSampler{T}, i::Int64) where {T<:WeightNumber}
+    w::T = sampler.weights[i]
     if !iszero(w)
         bounds = logbounds(w)
         from = get_level(bounds, sampler)
@@ -208,7 +213,7 @@ Take a single random sample from `sampler`, returning the index of the element s
 Samples by inverse transform sampling (see `cdf_sample`(@ref)) to select a `FlexLevel` in `sampler`, then rejection
 sampling (see `rejection_sample`(@ref)) an index from said `FlexLevel`.
 """
-@inline function sample(sampler::FlexleSampler)
+@inline function sample(sampler::FlexleSampler{T}) where {T<:WeightNumber}
     level, rand_n = cdf_sample(sampler)
     return rejection_sample(rand_n, level, sampler.weights)
 end
