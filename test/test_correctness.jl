@@ -21,15 +21,15 @@ Checks are as follows:
     - `sampler.sum` is (approximately) equal to the sum of `sampler.weights`
     - `sampler.max_log2_upper_bound` is equal to the log2 of the highest level's upper bound
 """
-function verify(sampler::FlexleSampler{T}; verbose::Bool=true, name::String="") where {T<:Flexle.WeightNumber}
-    verbose && println("Verifying FlexleSampler $name...")
+function verify(sampler::FlexleSampler; verbose::Bool=true, name::String="")
+    verbose && @printf "Verifying FlexleSampler %s...\n" name
     errors = 0
 
     # all weights in sampler.weights are represented in some level?
     for i in eachindex(sampler.weights)
         if !iszero(sampler.weights[i]) && !Flexle.in_sampler(i, sampler)
             errors += 1
-            verbose && println("Error $errors: index $i (weight $(sampler.weights[i])) not in any level")
+            verbose && @printf "Error %i: index %i (weight %f) not in any level\n" errors i sampler.weights[i]
         end
     end
 
@@ -39,10 +39,10 @@ function verify(sampler::FlexleSampler{T}; verbose::Bool=true, name::String="") 
         for i in level.elements
             if !(1 <= i <= num_weights)
                 errors += 1
-                verbose && println("Error $errors: index $i present in level ($(level.bounds[1]), $(level.bounds[2])) but not in weights")
+                verbose && @printf "Error %i: index %i present in level (%f, %f) but not in weights\n" errors i level.bounds[1] level.bounds[2]
             elseif !(level.bounds[1] <= sampler.weights[i] < level.bounds[2])
                 errors += 1
-                verbose && println("Error $errors: index $i (weight $(sampler.weights[i])) present in level ($(level.bounds[1]), $(level.bounds[2]))")
+                verbose && @printf "Error %i: index %i (weight %f) present in level (%f, %f)\n" errors i sampler.weights[i] level.bounds[1] level.bounds[2]
             end
         end
     end
@@ -54,7 +54,7 @@ function verify(sampler::FlexleSampler{T}; verbose::Bool=true, name::String="") 
             idx = level.elements[pos]
             if d[idx] != pos
                 errors += 1
-                verbose && println("Error $errors: element $idx (level ($(level.bounds[1]), $(level.bounds[2])), weight $(sampler.weights[idx])) not recorded as position $pos in element_positions")
+                verbose && @printf "Error %i: element %i (level (%f, %f), weight %f) not recorded as position %i in element_positions\n" errors idx level.bounds[1] level.bounds[2] sampler.weights[idx] pos
             end
         end
     end
@@ -63,43 +63,43 @@ function verify(sampler::FlexleSampler{T}; verbose::Bool=true, name::String="") 
         level = Flexle.get_level(sampler.weights[idx], sampler)
         if !iszero(pos) && ((pos > length(level.elements)) || !(level.elements[pos] == idx))
             errors += 1
-            verbose && println("Error $errors: element $idx (level ($(level.bounds[1]), $(level.bounds[2])), weight $(sampler.weights[idx])) incorrectly recorded as position $pos in element_positions")
+            verbose && @printf "Error %i: element %i (level (%f, %f), weight %f) incorrectly recorded as position %i in element_positions\n" errors idx level.bounds[1] level.bounds[2] sampler.weights[idx] pos
         end
     end
 
     # all recorded stats correct?
-    overall_sum = zero(T)
+    overall_sum = 0.0
     for level in sampler.levels
         empty = isempty(level.elements)
-        expected_sum = empty ? zero(T) : sum(sampler.weights[i] for i in level.elements)
+        expected_sum = empty ? 0.0 : sum(sampler.weights[i] for i in level.elements)
         if !Flexle.approxeq(expected_sum, level.sum)
             errors += 1
-            verbose && println("Error $errors: level ($(level.bounds[1]), $(level.bounds[2])) sum incorrect (expected $expected_sum, got $(level.sum))")     
+            verbose && @printf "Error %i: level (%f, %f) sum incorrect (expected %f, got %f)\n" errors level.bounds[1] level.bounds[2] expected_sum level.sum
         end
         overall_sum += expected_sum
 
-        expected_max = empty ? zero(T) : maximum(sampler.weights[i] for i in level.elements)
+        expected_max = empty ? 0.0 : maximum(sampler.weights[i] for i in level.elements)
         if expected_max != level.max
             errors += 1
-            verbose && println("Error $errors: level ($(level.bounds[1]), $(level.bounds[2])) max incorrect (expected $expected_max, got $(level.max))")
+            verbose && @printf "Error %i: level (%f, %f) max incorrect (expected %f, got %f)\n" errors level.bounds[1] level.bounds[2] expected_max level.max
         end
 
         expected_num_max = count(x -> sampler.weights[x]==level.max, level.elements)
         if expected_num_max != level.num_max
             errors += 1
-            verbose && println("Error $errors: level ($(level.bounds[1]), $(level.bounds[2])) num_max incorrect (expected $expected_num_max, got $(level.num_max))")
+            verbose && @printf "Error %i: level (%f, %f) num_max incorrect (expected %f, got %f)\n" errors level.bounds[1] level.bounds[2] expected_num_max level.num_max
         end
     end
     if !Flexle.approxeq(overall_sum, sampler.sum)     # correct for probable floating point error
         errors += 1
-        verbose && println("Error $errors: overall sampler sum incorrect (expected $overall_sum, got $(sampler.sum))")
+        verbose && @printf "Error %i: overall sampler sum incorrect (expected %f, got %f)" errors overall_sum sampler.sum
     end
     if !((isempty(sampler.levels) && isnothing(sampler.max_log2_upper_bound)) || (!isempty(sampler.levels) && (sampler.max_log2_upper_bound == Flexle.floor_log2(sampler.levels[1].bounds[2]))))
         errors += 1
-        verbose && println("Error $errors: sampler max_log2_upper_bound incorrect (expected $(Flexle.floor_log2(sampler.levels[1].bounds[2])), got $(sampler.max_log2_upper_bound))")
+        verbose && @printf "Error %i: sampler max_log2_upper_bound incorrect (expected %i, got %i)" errors Flexle.floor_log2(sampler.levels[1].bounds[2]) sampler.max_log2_upper_bound
     end
 
-    verbose && println("Final error count: $errors")
+    verbose && @printf"Final error count: %i\n" errors
     return errors
 end
 

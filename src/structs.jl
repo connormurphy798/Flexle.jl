@@ -1,19 +1,17 @@
 # Flexle structs
 
-const WeightNumber = Union{Float64, Int64}  # TODO: any Int or Float
-
-mutable struct FlexLevel{T <: WeightNumber}
-    bounds::Tuple{T,T}  # lower, upper
-    sum::T
-    max::T
+mutable struct FlexLevel
+    bounds::Tuple{Float64,Float64}  # lower, upper
+    sum::Float64
+    max::Float64
     num_max::Int64
     elements::Vector{Int64}
 end
 
-mutable struct FlexleSampler{T <: WeightNumber}
-    levels::Vector{FlexLevel{T}}
-    weights::Vector{T}
-    sum::T
+mutable struct FlexleSampler
+    levels::Vector{FlexLevel}
+    weights::Vector{Float64}
+    sum::Float64
     element_positions::Vector{Int64}
     max_log2_upper_bound::Union{Int64, Nothing}     # nothing when levels is empty
 end
