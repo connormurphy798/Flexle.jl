@@ -35,7 +35,7 @@ the following:
 
 | Function | Description |
 |---|---|
-| `FlexleSampler(weights)` | Create a `FlexleSampler` instance from an `AbstractVector` of `weights`. | 
+| `FlexleSampler(weights)` | Create a `FlexleSampler` instance from an `AbstractVector{Float64}` of `weights`. | 
 | `getindex(sampler, i)`[^1] | Get the weight of element `i` in `sampler`. |
 | `setindex!(sampler, w, i)`[^2] | Update the weight of element  `i` in `sampler` to be equal to `w`, returning the difference between the new and old weights of element `i`. |
 | `getweights(sampler)` | Get a `Vector` of all the weights in `sampler`. |
@@ -56,7 +56,7 @@ other sampling techniques from StatsBase.jl, see `benchmarking.md`.
 
 TL;DR—In general, Flexle is best suited to use cases where users will _repeatedly_ sample from and modify a
 collection of weights, as the linear-time construction of a `FlexleSampler` from such a collection is amortized
-by constant-time updating/addition of weights and near constant-time sampling. Flexle's sampling being asymptotically
+by constant-time updating/addition of weights and near constant-time sampling. That Flexle's sampling is asymptotically
 faster than that of standard linear-time algorithms also means that Flexle works best when working with large collections
 of weights, where there is a genuine performance improvement to be realized; for smaller collections, the modest
 improvement in sampling speed may not be enough to offset the comparatively expensive sampler initialization.
