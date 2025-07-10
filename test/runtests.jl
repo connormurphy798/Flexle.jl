@@ -128,6 +128,47 @@ include("test_runtime.jl")
             @test (verify(s, verbose=false) == 0)
         end
     end
+
+    @testset "sum tracking" begin
+        s = FlexleSampler([1.0, 0.0, 3.0, 1e19, 0.3])
+        @test (sum(getweights(s)) == s.sum) && (verify(s, verbose=false) == 0)
+        deleteat!(s, 4)
+        @test (sum(getweights(s)) == s.sum) && (verify(s, verbose=false) == 0)
+        deleteat!(s, 2)
+        @test (sum(getweights(s)) == s.sum) && (verify(s, verbose=false) == 0)
+
+        s = FlexleSampler([0.0, 1025.0, 1.0])
+        s[2] = 1.0
+        @test (sum(getweights(s)) == s.sum) && (verify(s, verbose=false) == 0)  # 1024/1026, no recalculation
+        
+        s = FlexleSampler([0.0, 2500.0, 1.0])
+        s[2] = 1.0
+        @test (sum(getweights(s)) == s.sum) && (verify(s, verbose=false) == 0)  # 2499/2501, recalculation
+
+        s = FlexleSampler([7.0, 18.0, 0.0, 1.0, 4.6, 1e19, 7.0, 9.0])
+        s[6] = 8.0
+        @test (sum(getweights(s)) == s.sum) && (verify(s, verbose=false) == 0)
+
+        s = FlexleSampler([7.0, 18.0, 0.0, 1.0, 4.6, 1e19, 7.0, 9.0])
+        s[6] = 1e18
+        @test (sum(getweights(s)) == s.sum) && (verify(s, verbose=false) == 0)
+
+        s = FlexleSampler([7.0, 18.0, 0.0, 1.0, 4.6, 1e19, 7.0, 9.0])
+        s[6] = 1e17
+        @test (sum(getweights(s)) == s.sum) && (verify(s, verbose=false) == 0)
+
+        s = FlexleSampler([7.0, 18.0, 0.0, 1.0, 4.6, 1e19, 7.0, 9.0])
+        s[6] = 1e16
+        @test (sum(getweights(s)) == s.sum) && (verify(s, verbose=false) == 0)
+
+        # Random.seed!(3)
+        s = FlexleSampler([rand() for _ in 1:100000])
+        r = 1:100000
+        for i in r
+            s[rand(r)] = rand()
+        end
+        @test (verify(s, verbose=false) == 0)
+    end
 end
 
 @testset "Flexle stats" begin

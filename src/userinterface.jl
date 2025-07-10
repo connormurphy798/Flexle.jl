@@ -91,6 +91,7 @@ function Base.setindex!(sampler::FlexleSampler, w::Float64, i::Int64)
     levels = sampler.levels
     w_old::Float64 = sampler.weights[i]
     delta::Float64 = w - w_old
+    prev_sum::Float64 = sampler.sum
     nonzero = !iszero(w_old), !iszero(w)
     if nonzero[1]
         from = get_level(w_old, sampler)
@@ -121,8 +122,11 @@ function Base.setindex!(sampler::FlexleSampler, w::Float64, i::Int64)
     end
     sampler.sum += delta
 
-    if nonzero[1] && (from === levels[begin] || from === levels[end]) && !level_is_populated(from)
-        trim_trailing_levels!(sampler)
+    if nonzero[1]
+        recalculate_sum(w_old, prev_sum) && (sampler.sum = sum(sampler.weights))
+        if (from === levels[begin] || from === levels[end]) && !level_is_populated(from)
+            trim_trailing_levels!(sampler)
+        end
     end
 
     return delta
@@ -179,12 +183,13 @@ All elements of index `>i` are updated to account for the removal of element `i`
 """
 function Base.deleteat!(sampler::FlexleSampler, i::Int64)
     w::Float64 = sampler.weights[i]
+    prev_sum::Float64 = sampler.sum
     if !iszero(w)
-        bounds = logbounds(w)
-        from = get_level(bounds, sampler)
+        from = get_level(logbounds(w), sampler)
         remove_from_FlexLevel!(i, from, sampler)
     end
     deleteat!(sampler.weights, i)
+
     for level in sampler.levels
         elements = level.elements
         for j in eachindex(elements)
@@ -194,8 +199,12 @@ function Base.deleteat!(sampler::FlexleSampler, i::Int64)
         end
     end
     deleteat!(sampler.element_positions, i)
-    if !iszero(w) && (from === sampler.levels[begin] || from === sampler.levels[end]) && isempty(from.elements)
-        trim_trailing_levels!(sampler)
+    
+    if !iszero(w)
+        recalculate_sum(w, prev_sum) && (sampler.sum = sum(sampler.weights))
+        if (from === sampler.levels[begin] || from === sampler.levels[end]) && isempty(from.elements)
+            trim_trailing_levels!(sampler)
+        end
     end
     return length(sampler.weights)
 end

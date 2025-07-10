@@ -72,7 +72,7 @@ function verify(sampler::FlexleSampler; verbose::Bool=true, name::String="")
     for level in sampler.levels
         empty = isempty(level.elements)
         expected_sum = empty ? 0.0 : sum(sampler.weights[i] for i in level.elements)
-        if !Flexle.approxeq(expected_sum, level.sum)
+        if !Flexle.approxeq(expected_sum, level.sum, t=1e-6)
             errors += 1
             verbose && @printf "Error %i: level (%f, %f) sum incorrect (expected %f, got %f)\n" errors level.bounds[1] level.bounds[2] expected_sum level.sum
         end
@@ -90,7 +90,7 @@ function verify(sampler::FlexleSampler; verbose::Bool=true, name::String="")
             verbose && @printf "Error %i: level (%f, %f) num_max incorrect (expected %f, got %f)\n" errors level.bounds[1] level.bounds[2] expected_num_max level.num_max
         end
     end
-    if !Flexle.approxeq(overall_sum, sampler.sum)     # correct for probable floating point error
+    if !isapprox(overall_sum, sampler.sum)     # correct for probable floating point error
         errors += 1
         verbose && @printf "Error %i: overall sampler sum incorrect (expected %f, got %f)" errors overall_sum sampler.sum
     end

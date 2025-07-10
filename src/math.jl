@@ -1,8 +1,8 @@
-const EXPONENT_MASK_FLOAT64::Int64   = 0x7FF0000000000000
-const EXPONENT_SHIFT_FLOAT64::Int64  = 52
-const EXPONENT_OFFSET_FLOAT64::Int64 = 1023
-const MANTISSA_MASK_FLOAT64::Int64   = 0x000FFFFFFFFFFFFF
-const MANTISSA_PLUS1_FLOAT64::Int64  = 0x0010000000000000 
+const EXPONENT_MASK_FLOAT64::Int64      = 0x7FF0000000000000
+const EXPONENT_SHIFT_FLOAT64::Int64     = 52
+const EXPONENT_OFFSET_FLOAT64::Int64    = 1023
+const MANTISSA_MASK_FLOAT64::Int64      = 0x000FFFFFFFFFFFFF
+const MANTISSA_PLUS1_FLOAT64::Int64     = 0x0010000000000000
 
 import Base.&
 
@@ -200,4 +200,12 @@ function max_level_weight(level::FlexLevel, sampler::FlexleSampler)
         end
     end
     return m, n
+end
+
+"""
+    recalculate_sum
+"""
+function recalculate_sum(w::Float64, sum::Float64; tol=0.999) # if one weight is 99.9% of sum, all other weights have >=10 digits of lost precision
+    recalc = !iszero(sum) && w/sum >= tol                      # log2( 99.9 / (100-99.9) ) = 9.96
+    return recalc
 end
