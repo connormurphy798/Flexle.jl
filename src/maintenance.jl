@@ -33,6 +33,7 @@ function add_to_FlexLevel!(i::Int64, level::FlexLevel, sampler::FlexleSampler; u
     if w > level.max
         level.max = w
         level.num_max = 1
+        
     elseif w == level.max
         level.num_max += 1
     end
@@ -83,6 +84,29 @@ function remove_from_FlexLevel!(i::Int64, level::FlexLevel, sampler::FlexleSampl
         if level.num_max == 0
             level.max, level.num_max = max_level_weight(level, sampler)
         end
+    end
+end
+
+"""
+    update_within_same_FlexLevel!(i, w, delta, level, sampler)
+
+Update the weight `w` of element `i` within the appropriate `level` of `sampler`.
+
+Only to be called when the prior weight of `i` in `sampler.weights[i]` belongs in the same `level` as new weight `w`.
+"""
+function update_within_same_FlexLevel!(i::Int64, w::Float64, delta::Float64, level::FlexLevel, sampler::FlexleSampler)
+    w_old = sampler.weights[i]
+    sampler.weights[i] = w
+    level.sum += delta
+    sampler.sum += delta
+    if w_old == level.max
+        level.num_max -= 1
+        if level.num_max == 0
+            level.max, level.num_max = max_level_weight(level, sampler)
+        end
+    elseif w > level.max
+        level.max = w
+        level.num_max = 1
     end
 end
 

@@ -103,12 +103,7 @@ function Base.setindex!(sampler::FlexleSampler, w::Float64, i::Int64)
         end
         to = get_level(bounds, sampler)
         if from == to
-            sampler.weights[i] = w
-            to.sum += delta
-            sampler.sum += delta
-            if w > to.max
-                to.max = w
-            end
+            update_within_same_FlexLevel!(i, w, delta, to, sampler) # updates sampler.weights[i] internally
             return delta
         end
     end
