@@ -81,7 +81,7 @@ CDF sampling a level, then rejection sampling within said level.
 
 ### Step 1: CDF sample a level
 
-For a general ordered collection of $n$ weights $V$ with sum $s$, CDF sampling is a sampling
+For an ordered collection of $n$ weights $V$ with sum $s$, CDF sampling is a sampling
 algorithm whose runtime is linear in the number of weights. Its operation is as follows:
 
 1. Select a random number $r \in [0, s)$.
@@ -98,7 +98,7 @@ weights, this is far faster than $O(n)$.
 
 ### Step 2: Rejection sample an element from the level
 
-For a general ordered collection of $n$ weights $V$ with maximum weight $m$, rejection sampling operates
+For an ordered collection of $n$ weights $V$ with maximum weight $m$, rejection sampling operates
 as follows:
 
 1. Select a random $i \in [1 .. n]$.
@@ -109,10 +109,10 @@ Once `Flexle.sample` has selected a level, the next step is to use rejection sam
 elements in said level, taking advantage of the precomputed max of any weight in the level;
 the element selected through rejection sampling is that returned by `Flexle.sample`. 
 
-The runtime of rejection sampling depends on the number of iterations $T$, which is itself a function of
-to the average probability of "rejecting" a choice of sample.
+The runtime of rejection sampling depends on the number of iterations $T$, which is by definition one
+more than the number of times $R$ that a choice of sample is rejected.
 
-$$E(T) = \sum_{t=1}^{\infty}{t \cdot P_\text{avg}(\text{reject})}^t$$
+$$E(T) = 1 + E(R) = 1 + \sum_{t=1}^{\infty}{t \cdot P_\text{avg}(\text{reject})}^t$$
 
 The probability of rejection for a choice of
 sample is $P(\text{reject}_i) = 1 - \frac{V_i}{m}$. The average probability of rejection is then:
@@ -135,7 +135,7 @@ $$P_\text{avg}(\text{reject}) = \lim_{m \to u}\lim_{n \to \infty}[\frac{1}{n}\su
 
 The expected value of iterations in this case is therefore:
 
-$$E(T) = \sum_{t=1}^{\infty}{(t \cdot (\frac{1}{2}})^t) = 2$$
+$$E(T) = 1 + \sum_{t=1}^{\infty}{(t \cdot (\frac{1}{2}})^t) = 3$$
 
 In other words, the expected number of rejection sampling iterations has a constant upper bound.
 Within-level rejection sampling in a `FlexleSampler` therefore runs in expected $\Theta(1)$ time.
@@ -183,7 +183,9 @@ of those elements in a separate weights `Vector` which have values fitting withi
 Because of this, elements of weight 0 are supported—they simply are not placed in any level, and they are
 accordingly sampled with probability 0.
 
-[^max]: Strictly speaking, the maximum weight is undefined for levels containing no weights.
+[^max]: Strictly speaking, the maximum weight is undefined for levels containing no weights. Because by
+construction levels can contain only positive, non-zero weights and can therefore never have a true maximum
+of 0, representing an undefined maximum using the special value of 0 is unambiguous.
 
 [^numweights]: In practice, the dynamic range of the weights often increases as the number of weights
 increases, but this is not necessarily the case.
