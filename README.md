@@ -25,6 +25,13 @@ As its weights are updated, a `FlexleSampler` adaptively adds and removes levels
 with storing weights separately from the levels themselves means that Flexle can in principle be used to model
 any discrete distribution, including one where a subset of events happen with probability 0.
 
+## Installation
+
+Flexle is available through Julia's package manager. To install, simply run the following in the Julia REPL:
+
+```
+]add Flexle
+```
 
 ## API
 
