@@ -24,9 +24,9 @@ the set of all positive (i.e. nonzero) weights in $W$.
 | - | - | - |
 | `FlexleSampler` | $Θ(n + \log(d))$ | |
 | `sample` | $O(\log(d))$ | expected |
-| `setindex!` | $Θ(1)$ | |
-| `push!` | $Θ(1)$ | amortized |
-| `deleteat!` | $O(n)$ | |
+| `setindex!` | $O(\log(d))$ | |
+| `push!` | $O(\log(d))$ | amortized |
+| `deleteat!` | $O(n + \log(d))$ | |
 
 
 
