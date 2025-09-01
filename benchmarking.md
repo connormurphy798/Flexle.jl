@@ -31,7 +31,7 @@ specified number of samples.
 
 | ![Figure 2a](docs/assets/02_compare_sampling_alias.png) |
 |:--:|
-|*Figure 2:* $\log_2$*-transformed ratios of runtime for `Flexle.sample` versus `StatsBase.alias_sample!`, including both sampling and data structure initialization. Negative values indicate better Flexle performance (Flexle-alias runtime ratio *$<1$*), while positive indicate better alias method performance (ratio* $>1$*).*|
+|*Figure 2:* $\log_2$*-transformed ratios of runtime for `Flexle.sample` versus `StatsBase.alias_sample!`, including both sampling and data structure initialization. Negative values indicate better Flexle performance (Flexle-alias runtime ratio* $<1$*), while positive indicate better alias method performance (ratio* $>1$*).*|
 
 In this case, the two methods' relative performance depends on both the number of weights and the number of
 samples. As a rough guideline, when taking $m$ samples from a vector of $n$ weights, one can expect runtime
