@@ -290,7 +290,7 @@ function plot_compare_sampling_alias(; path="docs/assets/", extension=".png", wr
     lim = ceil(maximum(abs.(runtime_ratio_results)))    # center 0 in heatmap by making upper and lower limits equal
     p = heatmap([string(l) for l in weightvector_size_range],
                 [string(k) for k in sample_size_range],
-                runtime_ratio_results, xlabel = "log_10(#weights)", ylabel = "log_10(#samples)", clim=(-lim, lim))
+                runtime_ratio_results, xlabel = "log_10(#weights)", ylabel = "log_10(#samples)", clim=(-lim, lim), seriescolor=:bluesreds)
 
     if write
         savefig(p, path * "02_compare_sampling_alias" * extension)
@@ -340,31 +340,41 @@ function do_ops_flexle(weights::Vector{Float64}, r::Int64)
     return sampler
 end
 
-function compare_ops(n_iterations::Int64)
-    sizes = [10, 100, 1000, 10000, 100000, 1000000]
+function compare_ops(num_iterations::Vector{Int64}, sizes::Vector{Int64})
     weight_vectors = [rand(n) for n in sizes]
 
-    weights_results::Vector{Float64} = [mean(@benchmark(do_ops_statsbase($w, $n_iterations))).time for w in weight_vectors]
-    flexle_results::Vector{Float64} = [mean(@benchmark(do_ops_flexle($w, $n_iterations))).time for w in weight_vectors]
+    statsbase_results  = Matrix{Float64}(undef, length(num_iterations), length(sizes))
+    flexle_results = Matrix{Float64}(undef, length(num_iterations), length(sizes))
 
-    return sizes, weights_results, flexle_results
+    for j in eachindex(sizes)
+        for i in eachindex(num_iterations)
+            statsbase_results[i,j] = mean(@benchmark(do_ops_statsbase($(weight_vectors[j]), $(num_iterations[i])))).time
+            flexle_results[i,j] = mean(@benchmark(do_ops_flexle($(weight_vectors[j]), $(num_iterations[i])))).time
+            println("ran: 10^", i, " iterations, 10^", j, " weights")
+        end
+    end
+
+    return statsbase_results, flexle_results
 end
 
-function plot_compare_ops(n_iterations::Int64; path="docs/assets/", extension=".png", write=true)
-    sizes, weights_results, flexle_results = compare_ops(n_iterations)
-    num_groups = length(sizes)
-    num_categories = 2
+function plot_compare_ops(; path="docs/assets/", extension=".png", write=true)
+    Random.seed!(1)
+    num_iteration_range = 1:5
+    weightvector_size_range = 1:5
 
-    ctg = repeat(["StatsBase (default sample)", "Flexle"], inner = num_groups)
-    nam = repeat([string(s) for s in sizes], outer = num_categories)
+    num_iterations = [10^k for k in num_iteration_range]
+    sizes          = [10^l for l in weightvector_size_range]
 
-    ylabel = "Mean time (ns), " * string(n_iterations) * " iterations"
-    p = groupedbar(nam, hcat(weights_results, flexle_results), group = ctg, xlabel = "#weights", ylabel = ylabel,
-        # title = "Scores by group and category", bar_width = 0.67,
-        lw = 0, yaxis=:log, ylims=(1e0, 1e+12), framestyle = :box, legend=:topleft, color=repeat([BLUE, GREEN], inner=num_groups))
+    statsbase_results, flexle_results = compare_ops(num_iterations, sizes)
+    runtime_ratio_results = log2.(flexle_results ./ statsbase_results)
+
+    lim = ceil(maximum(abs.(runtime_ratio_results)))    # center 0 in heatmap by making upper and lower limits equal
+    p = heatmap([string(l) for l in weightvector_size_range],
+                [string(k) for k in num_iteration_range],
+                runtime_ratio_results, xlabel = "log_10(#weights)", ylabel = "log_10(#iterations)", clim=(-lim, lim), seriescolor=:bluesreds)
 
     if write
-        savefig(p, path * "03_compare_ops_" * string(n_iterations) * extension)
+        savefig(p, path * "03_compare_ops" * extension)
     end
 
     display(p)
