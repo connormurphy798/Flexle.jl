@@ -1,3 +1,6 @@
+using StatsBase
+using Plots
+
 function testSampleRuntime!(w::Vector{Vector{Float64}}, w_sums::Vector{Float64}, sampler::FlexleSampler, r1::Int64, r2::Int64)
     r1 = 1:r1
     r2 = 1:r2
@@ -256,31 +259,41 @@ function flexle_runtime_test(weights, n_samples)
     return result
 end
 
-function compare_sampling_alias(n_samples::Int64)
-    sizes = [10, 100, 1000, 10000, 100000, 1000000]
+function compare_sampling_alias(num_samples::Vector{Int64}, sizes::Vector{Int64})
     weight_vectors = [rand(n) for n in sizes]
 
-    weights_results::Vector{Float64} = [mean(@benchmark(alias_runtime_test($w, $n_samples))).time for w in weight_vectors]
-    flexle_results::Vector{Float64} = [mean(@benchmark(flexle_runtime_test($w, $n_samples))).time for w in weight_vectors]
+    alias_results  = Matrix{Float64}(undef, length(num_samples), length(sizes))
+    flexle_results = Matrix{Float64}(undef, length(num_samples), length(sizes))
 
-    return sizes, weights_results, flexle_results
+    for j in eachindex(sizes)
+        for i in eachindex(num_samples)
+            alias_results[i,j] = mean(@benchmark(alias_runtime_test($(weight_vectors[j]), $(num_samples[i])))).time
+            flexle_results[i,j] = mean(@benchmark(flexle_runtime_test($(weight_vectors[j]), $(num_samples[i])))).time
+            println("ran: 10^", i, " samples, 10^", j, " weights")
+        end
+    end
+
+    return alias_results, flexle_results
 end
 
-function plot_compare_sampling_alias(n_samples::Int64; path="docs/assets/", extension=".png", write=true)
-    sizes, weights_results, flexle_results = compare_sampling_alias(n_samples)
-    num_groups = length(sizes)
-    num_categories = 2
+# Warning: this function takes a while to run (on the order of ~ten minutes on my Intel i7, 8GB memory laptop)
+function plot_compare_sampling_alias(; path="docs/assets/", extension=".png", write=true)
+    sample_size_range = 1:6
+    weightvector_size_range = 1:6
 
-    ctg = repeat(["StatsBase alias sample", "Flexle sample"], inner = num_groups)
-    nam = repeat([string(s) for s in sizes], outer = num_categories)
+    num_samples = [10^k for k in sample_size_range]
+    sizes       = [10^l for l in weightvector_size_range]
 
-    ylabel = "Mean time (ns), " * string(n_samples) * " samples"
-    p = groupedbar(nam, hcat(weights_results, flexle_results), group = ctg, xlabel = "#weights", ylabel = ylabel,
-        # title = "Scores by group and category", bar_width = 0.67,
-        lw = 0, yaxis=:log, ylims=(1e0, 1e+8), framestyle = :box, legend=:topleft, color=repeat([PURPLE, GREEN], inner=num_groups))
+    alias_results, flexle_results = compare_sampling_alias(num_samples, sizes)
+    runtime_ratio_results = log2.(flexle_results ./ alias_results)
+
+    lim = ceil(maximum(abs.(runtime_ratio_results)))    # center 0 in heatmap by making upper and lower limits equal
+    p = heatmap([string(l) for l in weightvector_size_range],
+                [string(k) for k in sample_size_range],
+                runtime_ratio_results, xlabel = "log_10(#weights)", ylabel = "log_10(#samples)", clim=(-lim, lim))
 
     if write
-        savefig(p, path * "02_compare_sampling_alias_" * string(n_samples) * extension)
+        savefig(p, path * "02_compare_sampling_alias" * extension)
     end
 
     display(p)

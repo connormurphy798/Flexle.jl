@@ -14,42 +14,39 @@ include only sampling time, excluding time to compute the relevant data structur
 |:--:|
 |*Figure 1: Comparison of raw sample runtime for `Flexle.sample` versus `StatsBase.sample`.* |
 
-For larger weights vectors (i.e. those $\geq 100$ in size), Flexle far outperforms StatsBase in sampling time.
+For larger weights vectors, Flexle far outperforms StatsBase in sampling time.
 For smaller weights vectors, there is no substantial difference in runtime. Considering just sampling,
 the performance benefits of using `Flexle.sample` versus `StatsBase.sample` are approximately linear in the number
-of weights. (More precisely, for a collection of weights $W$\, `Flexle.sample` will run in
-$O(\log(\frac{\max(W^+)}{\min(W^+)}))$ time, where $W^+$ is all of the positive (i.e. nonzero)
-weights in $W$\. In other words, the runtime of `Flexle.sample` is dependent not on the number of weights, but
-on the $\log$ of the ratio between the largest and smallest nonzero weights. For common distributions that are
-sufficiently large, this number will be far smaller than the size of the collection of weights, meaning the
-difference in sampling time between this and other (linear time) techniques is effectively linear in the number of
-weights.)
+of weights. (More precisely, for a collection of $n$ weights $W$\, `Flexle.sample` will run in $O(\log(d))$ time, where the
+dynamic range $d = \frac{\max(W^+)}{\min(W^+)}$, the ratio between the largest and smallest nonzero weights. For common distributions
+that are sufficiently large, $n$ so far exceeds $\log(d)$ that the difference in sampling time between Flexle and other (linear time)
+techniques is, empirically speaking, near linear in the number of weights.[^dynamicrange])
 
 In use cases where the weights vector does not change or in which it does so infrequently, other strategies that
 involve precomputing a data structure are feasible. The alias method is one such strategy, and it is supported
 by StatsBase. To compare performance to the alias method, we measured time to take $10^l$ samples (for
-$l \in [2 .. 5]$) from the weights vectors above. These tests include both time to initialize the sampling data
-structure (the alias table or flexle sampler, respectively) and to take the specified number of samples.
+$l \in [1 .. 6]$) from the weights vectors above using either the alias method or Flexle. These tests include both
+time to initialize the sampling data structure (the alias table or flexle sampler, respectively) and to take the
+specified number of samples.
 
-| ![Figure 2a](docs/assets/02_compare_sampling_alias_100.png) ![Figure 2b](docs/assets/02_compare_sampling_alias_1000.png) ![Figure 2c](docs/assets/02_compare_sampling_alias_10000.png) ![Figure 2d](docs/assets/02_compare_sampling_alias_100000.png) |
+| ![Figure 2a](docs/assets/02_compare_sampling_alias.png) |
 |:--:|
-|*Figure 2: Comparison of runtime for `Flexle.sample` versus `StatsBase.alias_sample!`, including both sampling and data structure initialization.* |
+|*Figure 2:* $\log_2$*-transformed ratios of runtime for `Flexle.sample` versus `StatsBase.alias_sample!`, including both sampling and data structure initialization. Negative values indicate better Flexle performance (Flexle-alias runtime ratio *$<1$*), while positive indicate better alias method performance (ratio* $>1$*).*|
 
-In this case, the alias method performs better for smaller weights vectors, while Flexle performs better for
-larger ones. The dividing line of identical performance depends on the number of samples. As a rough guideline,
-when taking $n$ samples from a vector of $m$ weights, one can expect runtime to be best using the alias method
-if $n > m$ and Flexle if $n < m$.
+In this case, the two methods' relative performance depends on both the number of weights and the number of
+samples. As a rough guideline, when taking $m$ samples from a vector of $n$ weights, one can expect runtime
+to be best using the alias method if $m >> n$ and Flexle if $m << n$, with similar runtimes where $m \approx n$.
 
 ## Updating weights
 
 The alias method is not feasible when the weights themselves are frequently changed; there is no way to adjust an
-existing alias table without simply regenerating it from scratch, a process which takes $O(m)$ time in the number
+existing alias table without simply regenerating it from scratch, a process which takes $O(n)$ time in the number
 of weights.
 
 By contrast, an existing `FlexleSampler` can be adjusted incrementally. Specially, a weight can be:
-- updated: $O(1)$
-- added: $O(1)$ (amortized)
-- removed: $O(m)$
+- updated: $O(d)$
+- added: $O(d)$ (amortized)
+- removed: $O(n)$
 
 To demonstrate this, consider the following sequence of operations that can be implemented using either Flexle
 or StatsBase. The sequence is intended to replicate the behavior of performing weighted random samples in practice,
@@ -78,7 +75,7 @@ running the above algorithm for random weights vectors as above for $10^j$ itera
 |*Figure 3: Comparison of runtime for Flexle versus StatsBase (default sampling algorithm) to perform the aforementioned arbitrary sequence of operations.* |
 
 Generally, Flexle's performance benefits are best realized when two conditions are met, the first being more important than the second:
-1. The number of operations to be performed (especially sampling, updating, and addition) is large, so the $O(m)$ cost of producing the sampler is successfully amortized.
+1. The number of operations to be performed (especially sampling, updating, and addition) is large, so the $O(n)$ cost of producing the sampler is successfully "amortized".
 2. The number of weights is large so that Flexle's sampling is substantially faster than that of alternatives (see [Figure 1](#sampling)).
 
 This is evident in that, in the case of $10^1$ iterations, StatsBase uniformly outperforms Flexle. For $10^2$ iterations,
@@ -88,10 +85,15 @@ iterations, Flexle outperforms StatsBase for all weights vector sizes.
 ## Summary
 
 Flexle's sampling is substantially faster than that of standard sampling techniques for large weights vectors. Flexle also
-offers comparable sampling speed to the alias method. However, because Flexle can perform constant time updating and
+offers comparable sampling speed to the alias method. However, because Flexle can perform $\log(d)$ updating and
 addition of weights, it is better suited than the alias method to applications where the weights change frequently.
 
 In such applications, the two fundamental considerations for predicting Flexle's overall performance are, primarily,
 the number of operations (sampling, updating, reading, etc.) to be performed on the weights vector, and secondarily,
 the size of said vector. Flexle performs best when these numbers (especially the number of operations) are large; for
 applications where this does not hold, other sampling techniques may be preferred.
+
+[^dynamicrange]: Strictly speaking, $\log(d)$ and $n$ are not formally related. However, for most applications with
+sufficiently large numbers of possible events, $\log(d) < n$. Consider a distribution where the most common events are
+$10^9$ times as likely as the least common; in this case, $\log_2(10^9) \approx 30$, so $\log(d) < n$ so long as there are more than
+$30$ possible events.

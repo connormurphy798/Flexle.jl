@@ -25,6 +25,8 @@ As its weights are updated, a `FlexleSampler` adaptively adds and removes levels
 with storing weights separately from the levels themselves means that Flexle can in principle be used to model
 any discrete distribution, including one where a subset of events happen with probability 0.
 
+For a detailed overview of Flexle's principle of operation (including runtime analysis), see `docs/principle.md`.
+
 ## Installation
 
 Flexle is available through Julia's package manager. To install, simply run the following in the Julia REPL:
@@ -63,10 +65,11 @@ other sampling techniques from StatsBase.jl, see `benchmarking.md`.
 
 TL;DR—In general, Flexle is best suited to use cases where users will _repeatedly_ sample from and modify a
 collection of weights, as the linear-time construction of a `FlexleSampler` from such a collection is amortized
-by constant-time updating/addition of weights and near constant-time sampling. That Flexle's sampling is asymptotically
-faster than that of standard linear-time algorithms also means that Flexle works best when working with large collections
-of weights, where there is a genuine performance improvement to be realized; for smaller collections, the modest
-improvement in sampling speed may not be enough to offset the comparatively expensive sampler initialization.
+by near constant time updating/addition of weights and sampling. That Flexle's sampling is (for most distributions)
+asymptotically faster than that of standard linear time algorithms also means that Flexle works best when working
+with large collections of weights, where there is a genuine performance improvement to be realized; for smaller
+collections, the modest improvement in sampling speed may not be enough to offset the comparatively expensive
+sampler initialization.
 
 ## Acknowledgements
 
