@@ -1,3 +1,10 @@
+# Future deprecation notice
+
+Flexle will eventually be supplanted by [WeightVectors](https://github.com/LilithHafner/WeightVectors.jl), a
+package using a similar sampling algorithm that solves numerical imprecision problems inherent to Flexle. At
+present, `push!` and `deleteat!` are not implemented in WeightVectors, so Flexle may temporarily be preferred
+for applications requiring those operations.
+
 # Flexle
 
 Fast, dynamically weighted random sampling.
